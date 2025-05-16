@@ -249,6 +249,120 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
   ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
 
+# TODO: To Bo removed later? 
+# 
+# This code will build doxygen documentation from Doxygenfile.cmake.in. 
+# This will be located inside build/doc folder and not in the
+# nuild/install/share/docs as official documentation. I use these files mainly
+# to compile dependency graph using graphviz and see what uses what in the
+# library. 
+option(BUILD_DOC "Build Doxygen documentation (if available)" OFF)
+
+if(BUILD_DOC)
+    find_package(Doxygen QUIET)
+    find_program(DOT_EXECUTABLE dot)
+
+    if(DOXYGEN_FOUND)
+        if(DOT_EXECUTABLE)
+            set(HAVE_DOT YES)
+            set(DOT_PATH "")  # Leave empty if 'dot' is in PATH
+        else()
+            message(WARNING "Graphviz 'dot' not found. Diagrams will not be generated.")
+            set(HAVE_DOT NO)
+            set(DOT_PATH "")
+        endif()
+
+        set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.cmake.in)
+        set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+
+        configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+
+        add_custom_target(doc_doxygen
+            COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMENT "Generating API documentation with Doxygen"
+            VERBATIM
+        )
+
+    else()
+        message(WARNING "Doxygen not found. Documentation will not be generated.")
+    endif()
+endif()
+
+# option(BUILD_DOC "Build Doxygen documentation (if available)" OFF)
+
+# if(BUILD_DOC)
+#     find_package(Doxygen REQUIRED)
+#     find_program(DOT_EXECUTABLE dot)
+
+#     if(DOT_EXECUTABLE)
+#         set(HAVE_DOT YES)
+#         set(DOT_PATH "")  # or get_path_from(DOT_EXECUTABLE) if needed
+#     else()
+#         message(WARNING "Graphviz 'dot' not found. Diagrams will not be generated.")
+#         set(HAVE_DOT NO)
+#         set(DOT_PATH "")
+#     endif()
+
+#     # Use the same Doxyfile.in as Autotools (already configured above!)
+#     set(DOXYFILE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
+#     set(DOXYFILE_CONFIGURED ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
+
+#     configure_file(${DOXYFILE_SOURCE} ${DOXYFILE_CONFIGURED} @ONLY)
+
+#     add_custom_target(doc_doxygen
+#         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_CONFIGURED}
+#         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+#         COMMENT "Generating HARP API documentation with Doxygen"
+#         VERBATIM
+#     )
+# endif()
+
+# option(BUILD_DOC "Build Doxygen documentation (if available)" OFF)
+
+# if(BUILD_DOC)
+#     find_package(Doxygen QUIET)
+#     find_program(DOT_EXECUTABLE dot)
+
+#     if(DOXYGEN_FOUND)
+#         if(DOT_EXECUTABLE)
+#             set(HAVE_DOT YES)
+#             set(DOT_PATH "")  # Leave empty if 'dot' is in PATH
+#         else()
+#             message(WARNING "Graphviz 'dot' not found. Diagrams will not be generated.")
+#             set(HAVE_DOT NO)
+#             set(DOT_PATH "")
+#         endif()
+
+#         # Provide substitutions for Doxyfile.in (used by both Autotools and CMake)
+#         set(abs_top_srcdir ${CMAKE_SOURCE_DIR})
+#         set(top_srcdir     ${CMAKE_SOURCE_DIR})
+#         set(top_builddir   ${CMAKE_BINARY_DIR})
+#         set(srcdir         ${CMAKE_CURRENT_SOURCE_DIR}/doc)
+#         set(PROJECT_VERSION ${VERSION})
+
+#         # Configure the Doxyfile
+#         set(DOXYFILE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
+#         set(DOXYFILE_CONFIGURED ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
+
+#         configure_file(${DOXYFILE_SOURCE} ${DOXYFILE_CONFIGURED} @ONLY)
+
+#         # Build target
+#         add_custom_target(doc_doxygen
+#             COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_CONFIGURED}
+#             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+#             COMMENT "Generating HARP API documentation with Doxygen"
+#             VERBATIM
+#         )
+#     else()
+#         message(STATUS "Doxygen not found. Documentation will not be built.")
+#     endif()
+# endif()
+
+
+
+
+
 
 # libharp sources
 #

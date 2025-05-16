@@ -18,7 +18,7 @@ INPUT                  = @top_srcdir@/libharp @top_builddir@/libharp/harp.h
 EXCLUDE                = @top_srcdir@/libharp/harp-operation-scanner.c
 STRIP_FROM_PATH        = @srcdir@ @top_srcdir@/libharp @top_builddir@/libharp
 REFERENCED_BY_RELATION = NO
-GENERATE_HTML          = NO
+GENERATE_HTML          = YES
 CASE_SENSE_NAMES       = NO
 SEARCHENGINE           = NO
 ENUM_VALUES_PER_LINE   = 1
@@ -30,3 +30,11 @@ PREDEFINED             = LIBHARP_API=
 GENERATE_XML           = YES
 XML_OUTPUT             = xml
 XML_PROGRAMLISTING     = NO
+
+HTML_HEADER           = @abs_top_srcdir@/doc/html/header.html
+HTML_FOOTER           = @abs_top_srcdir@/doc/html/footer.html
+HTML_STYLESHEET       = @abs_top_srcdir@/doc/html/doxygen.css
+HAVE_DOT              = @HAVE_DOT@
+DOT_PATH              = @DOT_PATH@
+PROJECT_NUMBER        = @PROJECT_VERSION@
+

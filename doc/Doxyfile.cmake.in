@@ -1,0 +1,66 @@
+# Project settings
+PROJECT_NAME           = harp
+PROJECT_BRIEF          = Harmonic Analysis and Related Processing
+PROJECT_NUMBER         = @PROJECT_VERSION@
+OUTPUT_DIRECTORY       = @CMAKE_BINARY_DIR@/docs
+CREATE_SUBDIRS         = NO
+
+# Input/output
+INPUT                  = @CMAKE_SOURCE_DIR@/libharp
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */test/*
+
+FILE_PATTERNS          = *.c *.h
+
+# HTML output
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+HTML_COLORSTYLE_HUE    = 220
+HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_GAMMA  = 80
+HTML_DYNAMIC_SECTIONS  = YES
+
+# LaTeX output
+GENERATE_LATEX         = NO
+
+# XML output
+GENERATE_XML           = YES
+XML_OUTPUT             = xml
+
+# Diagrams and Graphs (Graphviz)
+HAVE_DOT               = @HAVE_DOT@
+DOT_PATH               = @DOT_PATH@
+DOT_NUM_THREADS        = 16
+CLASS_DIAGRAMS         = YES
+COLLABORATION_GRAPH    = YES
+GROUP_GRAPHS           = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+DOT_GRAPH_MAX_NODES    = 100
+DOT_TRANSPARENT        = YES
+DOT_MULTI_TARGETS      = YES
+
+# Warnings and extraction
+WARN_IF_UNDOCUMENTED   = YES
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_LOCAL_METHODS  = NO
+
+# Documentation sources
+JAVADOC_AUTOBRIEF      = YES
+MULTILINE_CPP_IS_BRIEF = YES
+INLINE_INHERITED_MEMB  = YES
+
+# Source browser
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = YES
+STRIP_CODE_COMMENTS    = YES
+
+# Repository info
+STRIP_FROM_PATH        = @CMAKE_SOURCE_DIR@
+
