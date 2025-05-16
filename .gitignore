@@ -60,3 +60,5 @@ stamp-*
 # 
 build
 result
+.direnv 
+install-sh~
