@@ -1428,6 +1428,289 @@ static int read_observation_spectral_channel_quality(void *user_data, harp_array
  * Products' Registration Routines 
  */
 
+static void register_mapping_per_band(const char *product_type,
+		harp_variable_definition *variable_definition, 
+		const char* variable_name, const char* dataset_name,  
+		const char* bands_list[], int num_bands)
+{
+    //const char *path;
+    int i; 
+    char path[MAX_PATH_LENGTH];
+
+    // Loop through array of strings
+    //for (int i = 0; i < num_bands; i++) 
+    //{
+    //    printf("Band %d: %s\n", i, bands_list[i]);
+    //}
+
+    //if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    //{
+    //path = "/data/band3a/geolocation_data/latitude[]";
+    //harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
+    //path = "/data/band3b/geolocation_data/latitude[]";
+    //harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
+    //path = "/data/band3c/geolocation_data/latitude[]";
+    //harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
+    //}
+
+    for (i = 0; i < num_bands; i++) 
+    {
+        printf("Band %d: %s\n", i, bands_list[i], dataset_name, variable_name);
+        snprintf(path, MAX_PATH_LENGTH, "/data/%s/%s/%s", bands_list[i], dataset_name, variable_name);
+        harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, NULL);
+    }
+}
+
+static void register_geolocation_variables(harp_product_definition
+		*product_definition, const char *product_type, const char* bands_list[], int num_bands)
+{
+    const char *path;
+    const char *description;
+
+    harp_variable_definition *variable_definition;
+
+    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
+    harp_dimension_type dimension_type_2d[2] = { harp_dimension_time, harp_dimension_independent };
+    harp_dimension_type dimension_type_2d_spec[2] = { harp_dimension_time, harp_dimension_spectral };
+    long bounds_dimension[2] = { -1, 4 };
+
+    //const char* bands_list[] = {"band=3a or band unset", "band=3b", "band=3c"};
+    //int num_bands = sizeof(bands_list) / sizeof(bands_list[0]);
+
+
+    /* latitude */
+    description = "Latitude of the center of each ground pixel on the WGS84 reference ellipsoid.";
+    variable_definition =
+	harp_ingestion_register_variable_full_read(product_definition,
+			"latitude", harp_type_float, 1, dimension_type_1d,
+			NULL, description, "degree_north", NULL,
+			read_geolocation_latitude);
+    harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
+
+    //if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    //{
+    //    path = "/data/band3a/geolocation_data/latitude[]";
+    //    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
+    //    path = "/data/band3b/geolocation_data/latitude[]";
+    //    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
+    //    path = "/data/band3c/geolocation_data/latitude[]";
+    //    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
+    //}
+    register_mapping_per_band(product_type, variable_definition, "latitude[]", "geolocation_data", bands_list, num_bands); 
+
+    /* longitude */
+    description = "Longitude of the center of each ground pixel on the WGS84 reference ellipsoid.";
+    variable_definition =
+	harp_ingestion_register_variable_full_read(product_definition,
+			"longitude", harp_type_float, 1, dimension_type_1d,
+			NULL, description, "degree_east", NULL,
+			read_geolocation_longitude);
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
+        path = "/data/band3a/geolocation_data/longitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
+        path = "/data/band3b/geolocation_data/longitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
+        path = "/data/band3c/geolocation_data/longitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
+    }
+
+
+    /* latitude_bounds */
+    description = "The four latitude boundaries of each ground pixel on the WGS84 reference ellipsoid.";
+    variable_definition =
+	harp_ingestion_register_variable_full_read(product_definition,
+			"latitude_bounds", harp_type_float, 2,
+			dimension_type_2d, bounds_dimension, description,
+			"degree_north", NULL,
+			read_geolocation_latitude_bounds);
+    harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
+
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        path = "/data/band3a/geolocation_data/latitude_bounds[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
+        path = "/data/band3b/geolocation_data/latitude_bounds[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
+        path = "/data/band3c/geolocation_data/latitude_bounds[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
+    }
+
+    /* longitude_bounds */
+    description = "The four longitude boundaries of each ground pixel on the WGS84 reference ellipsoid.";
+    variable_definition =
+	harp_ingestion_register_variable_full_read(product_definition,
+			"longitude_bounds", harp_type_float, 2,
+			dimension_type_2d, bounds_dimension, description,
+			"degree_east", NULL,
+			read_geolocation_longitude_bounds);
+    harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
+
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        path = "/data/band3a/geolocation_data/longitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
+        path = "/data/band3b/geolocation_data/longitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
+        path = "/data/band3c/geolocation_data/longitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
+    }
+
+    /* satellite_altitude */
+    description = "The altitude of the spacecraft relative to the WGS84 reference ellipsoid.";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "sensor_altitude", harp_type_int32, 1,
+                                                   dimension_type_1d, NULL, description, 
+        					   "m",
+                                                   NULL, read_geolocation_satellite_altitude);
+    //harp_variable_definition_set_valid_range_float(variable_definition, 700000.0f, 900000.0f);
+
+    description = "the satellite altitude associated with a scanline is "
+	    "repeated for each pixel in the scanline";
+
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        path = "/data/band3a/geolocation_data/satellite_altitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, description);
+        path = "/data/band3b/geolocation_data/satellite_altitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, description);
+        path = "/data/band3c/geolocation_data/satellite_altitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, description);
+    }
+
+    /* satellite_latitude */
+    description = "Latitude of the spacecraft sub-satellite point on the WGS84 reference ellipsoid.";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "sensor_latitude", harp_type_float, 1,
+                                                   dimension_type_1d, NULL, description, "degree_north", NULL,
+                                                   read_geolocation_satellite_latitude);
+    harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
+    description = "the satellite latitude associated with a scanline is repeated for each pixel in the scanline";
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        path = "/data/band3a/geolocation_data/satellite_latitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, description);
+        path = "/data/band3b/geolocation_data/satellite_latitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, description);
+        path = "/data/band3c/geolocation_data/satellite_latitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, description);
+    }
+
+    /* satellite_longitude */
+    description = "Longitude of the spacecraft sub-satellite point on the WGS84 reference ellipsoid.";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "sensor_longitude", harp_type_float, 1,
+                                                   dimension_type_1d, NULL, description, "degree_east", NULL,
+                                                   read_geolocation_satellite_longitude);
+    harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
+    description = "the satellite longitude associated with a scanline is repeated for each pixel in the scanline";
+
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        path = "/data/band3a/geolocation_data/satellite_longitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, description);
+        path = "/data/band3b/geolocation_data/satellite_longitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, description);
+        path = "/data/band3c/geolocation_data/satellite_longitude[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, description);
+    }
+
+    /* satellite_orbit_phase */
+    description = "Relative offset (0.0 ... 1.0) of the measurement in the orbit.";
+    variable_definition =
+	harp_ingestion_register_variable_full_read(product_definition,
+			"sensor_orbit_phase", harp_type_float, 1,
+			dimension_type_1d, NULL, description,
+			HARP_UNIT_DIMENSIONLESS, NULL,
+			read_geolocation_satellite_orbit_phase);
+    description = "the satellite orbit phase associated with a scanline is repeated for each pixel in the scanline";
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        path = "/data/band3a/geolocation_data/satellite_orbit_phase[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, description);
+        path = "/data/band3b/geolocation_data/satellite_orbit_phase[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, description);
+        path = "/data/band3c/geolocation_data/satellite_orbit_phase[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, description);
+    }
+
+    /* solar_zenith_angle */
+    description = "Zenith angle of the sun at the ground pixel location on the WGS84 reference ellipsoid.";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "solar_zenith_angle", harp_type_float, 1,
+                                                   dimension_type_1d, NULL, description, "degree", NULL,
+                                                   read_geolocation_solar_zenith_angle);
+    harp_variable_definition_set_valid_range_float(variable_definition, 0.0f, 180.0f);
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        path = "/data/band3a/geolocation_data/solar_zenith_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
+        path = "/data/band3b/geolocation_data/solar_zenith_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
+        path = "/data/band3c/geolocation_data/solar_zenith_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
+    }
+
+    /* solar_azimuth_angle */
+    description = "Azimuth angle of the sun at the ground pixel location on the WGS84 ellipsoid.";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "solar_azimuth_angle", harp_type_float, 1,
+                                                   dimension_type_1d, NULL, description, "degree", NULL,
+                                                   read_geolocation_solar_azimuth_angle);
+    harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
+
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        path = "/data/band3a/geolocation_data/solar_zenith_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
+        path = "/data/band3b/geolocation_data/solar_zenith_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
+        path = "/data/band3c/geolocation_data/solar_zenith_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
+    }
+
+    /* viewing_zenith_angle */
+    description =
+        "Zenith angle of the spacecraft at the ground pixel location on the WGS84 reference ellipsoid.";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "sensor_zenith_angle", harp_type_float, 1,
+                                                   dimension_type_1d, NULL, description, "degree", NULL,
+                                                   read_geolocation_viewing_zenith_angle);
+    harp_variable_definition_set_valid_range_float(variable_definition, 0.0f, 180.0f);
+
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        path = "/data/band3a/geolocation_data/viewing_zenith_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
+        path = "/data/band3b/geolocation_data/viewing_zenith_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
+        path = "/data/band3c/geolocation_data/viewing_zenith_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
+    }
+
+    /* viewing_azimuth_angle */
+    description = "Azimuth angle of the spacecraft at the ground pixel location on the WGS84 reference ellipsoid."; 
+    variable_definition =
+	harp_ingestion_register_variable_full_read(product_definition,
+			"sensor_azimuth_angle", harp_type_float, 1,
+			dimension_type_1d, NULL, description, "degree", NULL,
+			read_geolocation_viewing_azimuth_angle);
+    harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
+
+    if (strcmp(product_type, "SN5_1B_NIR") == 0)
+    {
+        path = "/data/band3a/geolocation_data/sensor_azimuth_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
+        path = "/data/band3b/geolocation_data/sensor_azimuth_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
+        path = "/data/band3c/geolocation_data/sensor_azimuth_angle[]";
+        harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
+    }
+
+
+}
+
 
 static void register_nir_product(void)
 {
@@ -1444,6 +1727,10 @@ static void register_nir_product(void)
     long bounds_dimension[2] = { -1, 4 };
 
     const char *band_option_values[3] = { "3a", "3b", "3c" };
+
+    const char* bands_list[3] = {"band=3a or band unset", "band=3b", "band=3c"};
+    int num_bands = sizeof(bands_list) / sizeof(bands_list[0]);
+
 
     /* Product Registration Phase */
     description = "Sentinel-5 L1b NIR radiance spectra";
@@ -1468,188 +1755,15 @@ static void register_nir_product(void)
 		    description, NULL, NULL, read_orbit_index);
     harp_variable_definition_add_mapping(variable_definition, NULL, NULL, "/@orbit_start", NULL);
 
-    /* latitude */
-    description = "Latitude of the center of each ground pixel on the WGS84 reference ellipsoid.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "latitude", harp_type_float, 1, dimension_type_1d,
-                                                   NULL, description, "degree_north", NULL, read_geolocation_latitude);
-    harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
-    path = "/data/band3a/geolocation_data/latitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
-    path = "/data/band3b/geolocation_data/latitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
-    path = "/data/band3c/geolocation_data/latitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
 
-    /* longitude */
-    description = "Longitude of the center of each ground pixel on the WGS84 reference ellipsoid.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "longitude", harp_type_float, 1, dimension_type_1d,
-                                                   NULL, description, "degree_east", NULL, read_geolocation_longitude);
-    harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
-    path = "/data/band3a/geolocation_data/longitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
-    path = "/data/band3b/geolocation_data/longitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
-    path = "/data/band3c/geolocation_data/longitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
-
-    /* latitude_bounds */
-    description = "The four latitude boundaries of each ground pixel on the WGS84 reference ellipsoid.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "latitude_bounds", harp_type_float, 2,
-                                                   dimension_type_2d, bounds_dimension, description, "degree_north",
-                                                   NULL, read_geolocation_latitude_bounds);
-    harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
-
-    path = "/data/band3a/geolocation_data/latitude_bounds[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
-    path = "/data/band3b/geolocation_data/latitude_bounds[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
-    path = "/data/band3c/geolocation_data/latitude_bounds[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
-
-    /* longitude_bounds */
-    description = "The four longitude boundaries of each ground pixel on the WGS84 reference ellipsoid.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "longitude_bounds", harp_type_float, 2,
-                                                   dimension_type_2d, bounds_dimension, description, 
-						   "degree_east",
-                                                   NULL, read_geolocation_longitude_bounds);
-    harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
-
-    path = "/data/band3a/geolocation_data/longitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
-    path = "/data/band3b/geolocation_data/longitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
-    path = "/data/band3c/geolocation_data/longitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
-
-    // TODO: Figure out whether it should be float or int
-    /* satellite_altitude */
-    description = "The altitude of the spacecraft relative to the WGS84 reference ellipsoid.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "sensor_altitude", harp_type_int32, 1,
-                                                   dimension_type_1d, NULL, description, 
-						   "m",
-                                                   NULL, read_geolocation_satellite_altitude);
-    //harp_variable_definition_set_valid_range_float(variable_definition, 700000.0f, 900000.0f);
-
-    description = "the satellite altitude associated with a scanline is repeated for each pixel in the scanline";
-
-    path = "/data/band3a/geolocation_data/satellite_altitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, description);
-    path = "/data/band3b/geolocation_data/satellite_altitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, description);
-    path = "/data/band3c/geolocation_data/satellite_altitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, description);
-
-    /* satellite_latitude */
-    description = "Latitude of the spacecraft sub-satellite point on the WGS84 reference ellipsoid.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "sensor_latitude", harp_type_float, 1,
-                                                   dimension_type_1d, NULL, description, "degree_north", NULL,
-                                                   read_geolocation_satellite_latitude);
-    harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
-    description = "the satellite latitude associated with a scanline is repeated for each pixel in the scanline";
-    path = "/data/band3a/geolocation_data/satellite_latitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, description);
-    path = "/data/band3b/geolocation_data/satellite_latitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, description);
-    path = "/data/band3c/geolocation_data/satellite_latitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, description);
-
-    /* satellite_longitude */
-    description = "Longitude of the spacecraft sub-satellite point on the WGS84 reference ellipsoid.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "sensor_longitude", harp_type_float, 1,
-                                                   dimension_type_1d, NULL, description, "degree_east", NULL,
-                                                   read_geolocation_satellite_longitude);
-    harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
-    description = "the satellite longitude associated with a scanline is repeated for each pixel in the scanline";
-
-    path = "/data/band3a/geolocation_data/satellite_longitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, description);
-    path = "/data/band3b/geolocation_data/satellite_longitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, description);
-    path = "/data/band3c/geolocation_data/satellite_longitude[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, description);
-
-    /* satellite_orbit_phase */
-    description = "Relative offset (0.0 ... 1.0) of the measurement in the orbit.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "sensor_orbit_phase", harp_type_float, 1,
-                                                   dimension_type_1d, NULL, description, HARP_UNIT_DIMENSIONLESS, NULL,
-                                                   read_geolocation_satellite_orbit_phase);
-    description = "the satellite orbit phase associated with a scanline is repeated for each pixel in the scanline";
-    path = "/data/band3a/geolocation_data/satellite_orbit_phase[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, description);
-    path = "/data/band3b/geolocation_data/satellite_orbit_phase[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, description);
-    path = "/data/band3c/geolocation_data/satellite_orbit_phase[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, description);
-
-    /* solar_zenith_angle */
-    description = "Zenith angle of the sun at the ground pixel location on the WGS84 reference ellipsoid.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "solar_zenith_angle", harp_type_float, 1,
-                                                   dimension_type_1d, NULL, description, "degree", NULL,
-                                                   read_geolocation_solar_zenith_angle);
-    harp_variable_definition_set_valid_range_float(variable_definition, 0.0f, 180.0f);
-
-    path = "/data/band3a/geolocation_data/solar_zenith_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
-    path = "/data/band3b/geolocation_data/solar_zenith_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
-    path = "/data/band3c/geolocation_data/solar_zenith_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
+    register_geolocation_variables(product_definition, "SN5_1B_NIR", bands_list, num_bands);
 
 
-    /* solar_azimuth_angle */
-    description = "Azimuth angle of the sun at the ground pixel location on the WGS84 ellipsoid.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "solar_azimuth_angle", harp_type_float, 1,
-                                                   dimension_type_1d, NULL, description, "degree", NULL,
-                                                   read_geolocation_solar_azimuth_angle);
-    harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
 
-    path = "/data/band3a/geolocation_data/solar_zenith_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
-    path = "/data/band3b/geolocation_data/solar_zenith_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
-    path = "/data/band3c/geolocation_data/solar_zenith_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
 
-    /* viewing_zenith_angle */
-    description =
-        "Zenith angle of the spacecraft at the ground pixel location on the WGS84 reference ellipsoid.";
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "sensor_zenith_angle", harp_type_float, 1,
-                                                   dimension_type_1d, NULL, description, "degree", NULL,
-                                                   read_geolocation_viewing_zenith_angle);
-    harp_variable_definition_set_valid_range_float(variable_definition, 0.0f, 180.0f);
 
-    path = "/data/band3a/geolocation_data/viewing_zenith_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
-    path = "/data/band3b/geolocation_data/viewing_zenith_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
-    path = "/data/band3c/geolocation_data/viewing_zenith_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
 
-    /* viewing_azimuth_angle */
-    description = "Azimuth angle of the spacecraft at the ground pixel location on the WGS84 reference ellipsoid."; 
-    variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "sensor_azimuth_angle", harp_type_float, 1,
-                                                   dimension_type_1d, NULL, description, "degree", NULL,
-                                                   read_geolocation_viewing_azimuth_angle);
-    harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
 
-    path = "/data/band3a/geolocation_data/sensor_azimuth_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3a or band unset", NULL, path, NULL);
-    path = "/data/band3b/geolocation_data/sensor_azimuth_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3b", NULL, path, NULL);
-    path = "/data/band3c/geolocation_data/sensor_azimuth_angle[]";
-    harp_variable_definition_add_mapping(variable_definition, "band=3c", NULL, path, NULL);
 
     /* Observation Variables */
 
