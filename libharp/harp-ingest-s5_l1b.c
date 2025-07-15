@@ -22,12 +22,9 @@
 
 typedef enum s5_product_type_enum
 {
-    //s5_type_aui,
-    //s5_type_ch4,
-    //s5_type_no2,
-    //s5_type_o3,
-    //s5_type_so2,
+    s5_type_uvr,
     s5_type_nir,
+    s5_type_swr,
     s5_type_irr,
 } s5_product_type;
 
@@ -51,10 +48,12 @@ typedef enum s5_dimension_type_enum
 
 // Dimensions of the original (and end) product. time is needed otherwise it will crush 
 static const char *s5_dimension_name[S5_NUM_PRODUCT_TYPES][S5_NUM_DIM_TYPES] = {
+    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"},     /* UVR */
     //{"time", "scanline", "ground_pixel", "pixel_corners", "spectral_channel", NULL, NULL, NULL},     /* NIR */
     {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"},     /* NIR */
     //{"time", "scanline", "ground_pixel", "pixel_corners", "spectral_channel", NULL, NULL, NULL},     /* IRR */
-    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"}//NULL, NULL, NULL},     /* IRR */
+    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"},     /* SWR */
+    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"},     /* IRR */
     //{"time", "scanline", "ground_pixel", "corner", "layer", NULL, NULL, NULL},  /* NO2 */
     //{"time", "scanline", "ground_pixel", "corner", "layer", NULL, NULL, NULL},  /* O3_ */
     //{"time", "scanline", "ground_pixel", "corner", "layer", NULL, NULL, "profile"},     /* SO2 */
@@ -68,29 +67,14 @@ static const int s5_delta_time_num_dims[S5_NUM_PRODUCT_TYPES] = { 1, 1, 1, 1, 1,
 typedef struct ingest_info_struct
 {
     coda_product *product;
-    //int band;
 
     coda_cursor product_cursor    ; /* /data/band... */
     coda_cursor geolocation_cursor; /* /data/band.../geolocation_data */
     coda_cursor instrument_cursor ;
     coda_cursor observation_cursor;
-    //long num_scanlines;
-    //long num_pixels;
-    //long num_channels;
 
     coda_cursor sensor_mode_cursor;
     coda_cursor geo_data_cursor;
-    //coda_cursor observation_cursor;
-    //coda_cursor instrument_cursor;
-
-    //coda_cursor wavelength_cursor;
-    //harp_scalar wavelength_fill_value;
-    //coda_cursor observable_cursor;
-    //harp_scalar observable_fill_value;
-    //coda_cursor observable_error_cursor;
-    //harp_scalar observable_error_fill_value;
-    //coda_cursor observable_noise_cursor;
-    //harp_scalar observable_noise_fill_value;
 
     //float *observable_buffer;   /* [num_channels] */
 
@@ -116,28 +100,14 @@ typedef struct ingest_info_struct
     long num_spectral;
     long num_profile;
 
-
-    /* CLD */
-    //coda_cursor b3a_product_cursor;
-    //coda_cursor b3a_geolocation_cursor;
-    //coda_cursor b3a_detailed_results_cursor;
-    //coda_cursor b3a_input_data_cursor;
-    //coda_cursor b3c_product_cursor;
-    //coda_cursor b3c_geolocation_cursor;
-    //coda_cursor b3c_detailed_results_cursor;
-    //coda_cursor b3c_input_data_cursor;
-
     int processor_version;
     int collection_number;
-    int wavelength_ratio;
-    int ch4_option;     /* CH4: physics (default) or precision */
-    int no2_column_option;      /* NO2: total (default) or summed */
+    //int wavelength_ratio;
+    //int ch4_option;     /* CH4: physics (default) or precision */
+    //int no2_column_option;      /* NO2: total (default) or summed */
     int is_nrti;
 
     uint8_t *surface_layer_status;      /* used for O3; 0: use as-is, 1: remove */
-
-
-
 } ingest_info;
 
 
@@ -148,20 +118,14 @@ static const char *get_product_type_name(s5_product_type product_type)
 {
     switch (product_type)
     {
+        case s5_type_uvr:
+            return "SN5_1B_UVR";
         case s5_type_nir:
             return "SN5_1B_NIR";
+        case s5_type_swr:
+            return "SN5_1B_SWR";
         case s5_type_irr:
             return "SN5_1B_IRR";
-        //case s5_type_no2:
-        //    return "SN5_02_NO2";
-        //case s5_type_o3:
-        //    return "SN5_02_O3_";
-        //case s5_type_so2:
-        //    return "SN5_02_SO2";
-        //case s5_type_cld:
-        //    return "SN5_02_CLD";
-        //case s5_type_co:
-        //    return "SN5_02_CO_";
     }
 
     assert(0);
@@ -458,7 +422,30 @@ static int init_cursors(ingest_info *info)
     char* curr_band; 
 
     /* Choosing the apropriate dataset based on the option chosen */
-    if (info->product_type == s5_type_nir)
+    if (info->product_type == s5_type_uvr)
+    {
+        if (info->use_band_option == 0)
+	{
+            printf("[init_cursors]: band=1a\n"); 
+	    curr_band = "band1a"; 
+	}
+	else if (info->use_band_option == 1)
+	{
+            printf("[init_cursors]: band=1b\n"); 
+	    curr_band = "band1b"; 
+	}
+	else if (info->use_band_option == 2)
+	{
+            printf("[init_cursors]: band=2\n"); 
+	    curr_band = "band2"; 
+	}
+	else
+	{
+            harp_set_error(HARP_ERROR_CODA, NULL);
+            return -1;
+	}
+    }
+    else if (info->product_type == s5_type_nir)
     {
         if (info->use_band_option == 0)
 	{
@@ -477,25 +464,28 @@ static int init_cursors(ingest_info *info)
 	}
 	else
 	{
-            printf("ERROR\n"); 
             harp_set_error(HARP_ERROR_CODA, NULL);
             return -1;
 	}
     }
-    //if (info->use_cld_band_options == 0)
-    //{
-    //    info->product_cursor = info->b3a_product_cursor;
-    //    info->geolocation_cursor = info->b3a_geolocation_cursor;
-    //    info->detailed_results_cursor = info->b3a_detailed_results_cursor;
-    //    info->input_data_cursor = info->b3a_input_data_cursor;
-    //}
-    //else
-    //{
-    //    info->product_cursor = info->b3c_product_cursor;
-    //    info->geolocation_cursor = info->b3c_geolocation_cursor;
-    //    info->detailed_results_cursor = info->b3c_detailed_results_cursor;
-    //    info->input_data_cursor = info->b3c_input_data_cursor;
-    //}
+    else if (info->product_type == s5_type_swr)
+    {
+        if (info->use_band_option == 0)
+	{
+            printf("[init_cursors]: band=4\n"); 
+	    curr_band = "band4"; 
+	}
+	else if (info->use_band_option == 1)
+	{
+            printf("[init_cursors]: band=5\n"); 
+	    curr_band = "band5"; 
+	}
+	else
+	{
+            harp_set_error(HARP_ERROR_CODA, NULL);
+            return -1;
+	}
+    }
 
     /* Bind a cursor to the root of the CODA product */
     if (coda_cursor_set_product(&cursor, info->product) != 0)
@@ -518,15 +508,6 @@ static int init_cursors(ingest_info *info)
     }
     /* Save data/band* cursor; subsequent navigation is relative to this. */
     info->product_cursor = cursor;
-
-    /* Enter SUPPORT_DATA under PRODUCT (same location for both layouts):
-     * '/PRODUCT/SUPPORT_DATA' or '/data/PRODUCT/SUPPORT_DATA'
-     */
-    //if (coda_cursor_goto_record_field_by_name(&cursor, "SUPPORT_DATA") != 0)
-    //{
-    //    harp_set_error(HARP_ERROR_CODA, NULL);
-    //    return -1;
-    //}
 
     /* Geolocation group: under band*
      * '/data/band.../geolocation_data' for both layouts.
@@ -563,7 +544,6 @@ static int init_cursors(ingest_info *info)
     return 0;
 }
 
-// TODO: Correct this one; there is no levels/layers. Also need to add spectral dimension 
 /* Initialize record dimension lengths for the Sentinel-5 simulated L1b dataset */
 static int init_dimensions(ingest_info *info)
 {
@@ -615,49 +595,6 @@ static int init_dimensions(ingest_info *info)
             return -1;
         }
     }
-
-    /* Get number of layers */
-    //if (s5_dimension_name[info->product_type][s5_dim_layer] != NULL)
-    //{
-    //    if (get_dimension_length(info, s5_dimension_name[info->product_type][s5_dim_layer], &info->num_layers) != 0)
-    //    {
-    //        return -1;
-    //    }
-    //}
-
-    //if (s5_dimension_name[info->product_type][s5_dim_level] != NULL)
-    //{
-    //    if (get_dimension_length(info, s5_dimension_name[info->product_type][s5_dim_level], &info->num_levels) != 0)
-    //    {
-    //        return -1;
-    //    }
-    //}
-
-    ///* Infer levels = layers + 1 */
-    //if (info->num_layers > 0 && info->num_levels > 0)
-    //{
-    //    if (info->num_levels != info->num_layers + 1)
-    //    {
-    //        harp_set_error(HARP_ERROR_INGESTION, "dimension '%s' has length %ld; expected %ld",
-    //                       s5_dimension_name[info->product_type][s5_dim_level], info->num_levels, info->num_layers + 1);
-    //        return -1;
-    //    }
-    //}
-    //else if (info->num_layers > 0)
-    //{
-    //    info->num_levels = info->num_layers + 1;
-    //}
-    //else if (info->num_levels > 0)
-    //{
-    //    if (info->num_levels < 2)
-    //    {
-    //        harp_set_error(HARP_ERROR_INGESTION, "dimension '%s' has length %ld; expected >= 2",
-    //                       s5_dimension_name[info->product_type][s5_dim_level], info->num_levels);
-    //        return -1;
-    //    }
-
-    //    info->num_layers = info->num_levels - 1;
-    //}
 
     return 0;
 }
@@ -732,29 +669,15 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
 
     info->product = product;
 
-
-    info->num_times = 0;
+    /* Dimensions */
     info->num_scanlines = 0;
     info->num_pixels = 0;
     info->num_corners = 0;
-    //info->num_layers = 0;
-    //info->num_levels = 0;
-
     info->num_spectral = 0;
-    //info->num_profile = 0;
 
-    //info->wavelength_ratio = 354;
 
-    //info->surface_layer_status = NULL;
-
-    /* default */
-    //info->ch4_option = 0;
-    //info->use_ch4_band_options = 0;
-    //info->no2_column_option = 0;
-    //info->use_cld_band_options = 0;     /* CLD: BAND3A (default), or BAND3C */
-    //info->so2_column_type = 0;  /* 0=PBL (default)  1=1 km  2=7 km  3=15 km */
-
-    info->use_band_option = 0; /* Each product has its own band option */ 
+    /* Each product has its own bands, which we convert into options */ 
+    info->use_band_option = 0; 
 
 
     printf("[ingestion_init]: get_product_type\n"); 
@@ -779,30 +702,35 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
 
     printf("[ingestion_init]: has_option\n"); 
 
-    //if (harp_ingestion_options_has_option(options, "wavelength_ratio"))
-    //{
-    //    if (harp_ingestion_options_get_option(options, "wavelength_ratio", &option_value) != 0)
-    //    {
-    //        ingestion_done(info);
-    //        return -1;
-    //    }
-    //    if (strcmp(option_value, "335_367nm") == 0)
-    //    {
-    //        info->wavelength_ratio = 335;
-    //    }
-    //    else if (strcmp(option_value, "354_388nm") == 0)
-    //    {
-    //        info->wavelength_ratio = 354;
-    //    }
-    //    else
-    //    {
-    //        /* Option values are guaranteed to be legal if present. */
-    //        assert(strcmp(option_value, "340_380nm") == 0);
-    //        info->wavelength_ratio = 340;
-    //    }
-    //}
-
-    if (info->product_type == s5_type_nir)
+    if (info->product_type == s5_type_uvr)
+    {
+        if (harp_ingestion_options_has_option(options, "band"))
+        {
+            if (harp_ingestion_options_get_option(options, "band", &option_value) != 0)
+            {
+                ingestion_done(info);
+                return -1;
+            }
+            if (strcmp(option_value, "1b") == 0)
+            {
+         	info->use_band_option = 1; 
+                printf("[ingestion_init]: band=1b\n"); 
+            }
+            else if (strcmp(option_value, "2") == 0)
+            {
+         	info->use_band_option = 2; 
+                printf("[ingestion_init]: band=2\n"); 
+            }
+            else
+            {
+                /* Option values are guaranteed to be legal if present. */
+                assert(strcmp(option_value, "1a") == 0);
+         	info->use_band_option = 0; 
+                printf("[ingestion_init]: band=1a\n"); 
+            }
+        }
+    }
+    else if (info->product_type == s5_type_nir)
     {
         if (harp_ingestion_options_has_option(options, "band"))
         {
@@ -830,6 +758,29 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
             }
         }
     }
+    else if (info->product_type == s5_type_swr)
+    {
+        if (harp_ingestion_options_has_option(options, "band"))
+        {
+            if (harp_ingestion_options_get_option(options, "band", &option_value) != 0)
+            {
+                ingestion_done(info);
+                return -1;
+            }
+            if (strcmp(option_value, "5") == 0)
+            {
+         	info->use_band_option = 1; 
+                printf("[ingestion_init]: band=5\n"); 
+            }
+            else
+            {
+                /* Option values are guaranteed to be legal if present. */
+                assert(strcmp(option_value, "4") == 0);
+         	info->use_band_option = 0; 
+                printf("[ingestion_init]: band=4\n"); 
+            }
+        }
+    }
 
 
     printf("[ingestion_init]: init_cursors\n"); 
@@ -852,16 +803,6 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
     printf("[ingestion_init]: num_pixels    = %d\n", info->num_pixels); 
     printf("[ingestion_init]: num_corners   = %d\n", info->num_corners); 
     printf("[ingestion_init]: num_spectral  = %d\n", info->num_spectral); 
-
-    /* Adding spectral dimension depending on the L1b product */
-    //if (info->product_type != s5_type_irr)
-    //{
-    //    info->num_spectral = 196; /* spectral_channel */
-    //}
-    //else
-    //{
-    //    info->num_spectral = 102; /*  spectral_channel  */
-    //}
 
     *user_data = info;
 
@@ -925,7 +866,7 @@ static int read_dimensions(void *user_data, long dimension[HARP_NUM_DIM_TYPES])
     return 0;
 }
 
-/* Copied from the s5p l2 module */
+/* Modified version from the s5p l2 module */
 static int read_dataset(coda_cursor cursor, const char *dataset_name, harp_data_type data_type, long num_elements,
                         harp_array data)
 {
@@ -1429,7 +1370,6 @@ static int read_observation_spectral_channel_quality(void *user_data, harp_array
  */
 
 static void register_mapping_per_band(
-		//const char *product_type,
 		harp_variable_definition *variable_definition, 
 		const char* variable_name, const char* dataset_name,  
 		const char* bands_list[], int num_bands, const char* description)
@@ -1457,7 +1397,7 @@ static void register_mapping_per_band(
 }
 
 static void register_geolocation_variables(harp_product_definition
-		*product_definition, const char *product_type, const char* bands_list[], int num_bands)
+		*product_definition, const char* bands_list[], int num_bands)
 {
     const char *path;
     const char *description;
@@ -1609,7 +1549,7 @@ static void register_geolocation_variables(harp_product_definition
 
 
 static void register_observation_variables(harp_product_definition
-		*product_definition, const char *product_type, const char* bands_list[], int num_bands)
+		*product_definition, const char* bands_list[], int num_bands)
 {
     const char *path;
     const char *description;
@@ -1701,6 +1641,57 @@ static void register_observation_variables(harp_product_definition
 }
 
 
+static void register_uvr_product(void)
+{
+    const char *path;
+    const char *description;
+
+    harp_ingestion_module *module;
+    harp_product_definition *product_definition;
+    harp_variable_definition *variable_definition;
+
+    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
+    harp_dimension_type dimension_type_2d[2] = { harp_dimension_time, harp_dimension_independent };
+    harp_dimension_type dimension_type_2d_spec[2] = { harp_dimension_time, harp_dimension_spectral };
+    long bounds_dimension[2] = { -1, 4 };
+
+    const char *band_option_values[3] = { "1a", "1b", "2" };
+
+    const char* bands_list[3] = {"band=1a or band unset", "band=1b", "band2"};
+    int num_bands = sizeof(bands_list) / sizeof(bands_list[0]);
+
+
+    /* Product Registration Phase */
+    description = "Sentinel-5 L1b UVR radiance spectra";
+    module = harp_ingestion_register_module("SN5_1B_UVR", "Sentinel-5", "EPS_SG", "SN5_1B_UVR",
+                                            description, ingestion_init, ingestion_done);
+
+    /* Option Registration Phase */ 
+    description = "Choose which SWR band values to ingest: `band1a` (default), `band1b`, or `band2`";
+    harp_ingestion_register_option(module, "band",      /* option name */
+                                   description, 3,      /* number of values */
+                                   band_option_values); /* allowed values */
+
+    /* harp_ingestion_register_product( module ptr, "ProductShortName", options table (NULL), dimension-callback ) */
+    product_definition = harp_ingestion_register_product(module, "S5_1B_UVR", NULL, read_dimensions);
+
+    /* Variables' Registration Phase */
+
+    /* orbit_index */
+    description = "absolute orbit number";
+    variable_definition = harp_ingestion_register_variable_full_read(product_definition, "orbit_index", 
+		    harp_type_int32, 0, NULL, NULL,
+		    description, NULL, NULL, read_orbit_index);
+    harp_variable_definition_add_mapping(variable_definition, NULL, NULL, "/@orbit_start", NULL);
+
+
+    register_geolocation_variables(product_definition, bands_list, num_bands);
+    register_observation_variables(product_definition, bands_list, num_bands);
+    // TODO: Instrument Variables 
+
+}
+
+
 
 
 static void register_nir_product(void)
@@ -1747,26 +1738,71 @@ static void register_nir_product(void)
     harp_variable_definition_add_mapping(variable_definition, NULL, NULL, "/@orbit_start", NULL);
 
 
-    // TODO: Product Type isn't necessary here, but lets keep it for now 
-    register_geolocation_variables(product_definition, "SN5_1B_NIR", bands_list, num_bands);
-    register_observation_variables(product_definition, "SN5_1B_NIR", bands_list, num_bands);
+    register_geolocation_variables(product_definition, bands_list, num_bands);
+    register_observation_variables(product_definition, bands_list, num_bands);
     // TODO: Instrument Variables 
 
-    /* Observation Variables */
+}
+
+static void register_swr_product(void)
+{
+    const char *path;
+    const char *description;
+
+    harp_ingestion_module *module;
+    harp_product_definition *product_definition;
+    harp_variable_definition *variable_definition;
+
+    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
+    harp_dimension_type dimension_type_2d[2] = { harp_dimension_time, harp_dimension_independent };
+    harp_dimension_type dimension_type_2d_spec[2] = { harp_dimension_time, harp_dimension_spectral };
+    long bounds_dimension[2] = { -1, 4 };
+
+    const char *band_option_values[2] = { "4", "5" };
+
+    const char* bands_list[3] = {"band=4 or band unset", "band=5"};
+    int num_bands = sizeof(bands_list) / sizeof(bands_list[0]);
 
 
+    /* Product Registration Phase */
+    description = "Sentinel-5 L1b SWR radiance spectra";
+    module = harp_ingestion_register_module("SN5_1B_SWR", "Sentinel-5", "EPS_SG", "SN5_1B_SWR",
+                                            description, ingestion_init, ingestion_done);
+
+    /* Option Registration Phase */ 
+    description = "Choose which SWR band values to ingest: `band4` (default), or `band5`";
+    harp_ingestion_register_option(module, "band",      /* option name */
+                                   description, 2,      /* number of values */
+                                   band_option_values); /* allowed values */
+
+    /* harp_ingestion_register_product( module ptr, "ProductShortName", options table (NULL), dimension-callback ) */
+    product_definition = harp_ingestion_register_product(module, "S5_1B_SWR", NULL, read_dimensions);
+
+    /* Variables' Registration Phase */
+
+    /* orbit_index */
+    description = "absolute orbit number";
+    variable_definition = harp_ingestion_register_variable_full_read(product_definition, "orbit_index", 
+		    harp_type_int32, 0, NULL, NULL,
+		    description, NULL, NULL, read_orbit_index);
+    harp_variable_definition_add_mapping(variable_definition, NULL, NULL, "/@orbit_start", NULL);
 
 
-
-    // TODO: Add Instrument Data
+    register_geolocation_variables(product_definition, bands_list, num_bands);
+    register_observation_variables(product_definition, bands_list, num_bands);
+    // TODO: Instrument Variables 
 
 }
+
+
 
 
 /* Entry point */
 int harp_ingestion_module_s5_l1b_init(void)
 {
+    register_uvr_product();
     register_nir_product();
+    register_swr_product();
 
     return 0;
 }
