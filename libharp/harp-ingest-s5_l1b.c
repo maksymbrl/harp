@@ -1,3 +1,34 @@
+/*
+ * Copyright (C) 2015-2025 S[&]T, The Netherlands.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "coda.h"
 #include "harp-ingestion.h"
 
@@ -42,61 +73,41 @@ typedef enum s5_dimension_type_enum
 /* handy constant: last enum value + 1 */
 #define S5_NUM_DIM_TYPES   ((int)s5_dim_spectral + 1)
 
-// Dimensions of the original (and end) product. time is needed otherwise it will crush 
-static const char *s5_dimension_name[S5_NUM_PRODUCT_TYPES][S5_NUM_DIM_TYPES] = {
-    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"},     /* UVR */
-    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"},     /* NIR */
-    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"},     /* SWR */
-    {"scanline", "pixel", NULL, "spectral_channel"},            /* IRR */
+static const char *s5_dimension_name[S5_NUM_PRODUCT_TYPES][S5_NUM_DIM_TYPES] = 
+{
+    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"}, /* UVR */
+    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"}, /* NIR */
+    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"}, /* SWR */
+    {"scanline", "pixel", NULL, "spectral_channel"},                   /* IRR */
 };
 
 /* the array shape of delta_time variable for each data product */
-static const int s5_delta_time_num_dims[S5_NUM_PRODUCT_TYPES] = { 1, 1, 1, 1, 1, 1 };
+static const int s5_delta_time_num_dims[S5_NUM_PRODUCT_TYPES] = { 1, 1, 1, 1 };
 
 typedef struct ingest_info_struct
 {
     coda_product *product;
 
-    coda_cursor product_cursor    ; /* /data/band... */
+    coda_cursor product_cursor;     /* /data/band... */
     coda_cursor geolocation_cursor; /* /data/band.../geolocation_data */
-    coda_cursor instrument_cursor ;
+    coda_cursor instrument_cursor;
     coda_cursor observation_cursor;
 
     coda_cursor sensor_mode_cursor;
     coda_cursor geo_data_cursor;
 
-    //float *observable_buffer;   /* [num_channels] */
-
-
-    // TODO: Fix these to the correct values according to the end product  
-    //int use_co_corrected;
-    //int use_co_nd_avk;
-    //int use_ch4_band_options;   /* CH4: SWIR-1 (default), SWIR-3, or NIR-2 */
-    //int use_cld_band_options;   /* CLD: BAND3A (default), or BAND3C */
-    //int so2_column_type;        /* 0: PBL (anthropogenic), 1: 1km box profile, 2: 7km bp, 3: 15km bp, 4: layer height */
-
     int use_band_option; 
 
     s5_product_type product_type;
-    long num_times;
     long num_scanlines;
     long num_pixels;
     long num_corners;
-    long num_layers;
-    long num_levels;
-    long num_latitudes;
-    long num_longitudes;
     long num_spectral;
-    long num_profile;
 
     int processor_version;
     int collection_number;
-    //int wavelength_ratio;
-    //int ch4_option;     /* CH4: physics (default) or precision */
-    //int no2_column_option;      /* NO2: total (default) or summed */
-    int is_nrti;
 
-    uint8_t *surface_layer_status;      /* used for O3; 0: use as-is, 1: remove */
+    uint8_t *surface_layer_status;      
 } ingest_info;
 
 
@@ -415,17 +426,14 @@ static int init_cursors(ingest_info *info)
     {
         if (info->use_band_option == 0)
 	{
-            printf("[init_cursors]: band=1a\n"); 
 	    curr_band = "band1a"; 
 	}
 	else if (info->use_band_option == 1)
 	{
-            printf("[init_cursors]: band=1b\n"); 
 	    curr_band = "band1b"; 
 	}
 	else if (info->use_band_option == 2)
 	{
-            printf("[init_cursors]: band=2\n"); 
 	    curr_band = "band2"; 
 	}
 	else
@@ -438,17 +446,14 @@ static int init_cursors(ingest_info *info)
     {
         if (info->use_band_option == 0)
 	{
-            printf("[init_cursors]: band=3a\n"); 
 	    curr_band = "band3a"; 
 	}
 	else if (info->use_band_option == 1)
 	{
-            printf("[init_cursors]: band=3b\n"); 
 	    curr_band = "band3b"; 
 	}
 	else if (info->use_band_option == 2)
 	{
-            printf("[init_cursors]: band=3c\n"); 
 	    curr_band = "band3c"; 
 	}
 	else
@@ -461,12 +466,10 @@ static int init_cursors(ingest_info *info)
     {
         if (info->use_band_option == 0)
 	{
-            printf("[init_cursors]: band=4\n"); 
 	    curr_band = "band4"; 
 	}
 	else if (info->use_band_option == 1)
 	{
-            printf("[init_cursors]: band=5\n"); 
 	    curr_band = "band5"; 
 	}
 	else
@@ -479,42 +482,34 @@ static int init_cursors(ingest_info *info)
     {
         if (info->use_band_option == 0)
 	{
-            printf("[init_cursors]: band=1a\n"); 
 	    curr_band = "band1a"; 
 	}
 	else if (info->use_band_option == 1)
 	{
-            printf("[init_cursors]: band=1b\n"); 
 	    curr_band = "band1b"; 
 	}
 	else if (info->use_band_option == 2)
 	{
-            printf("[init_cursors]: band=2\n"); 
 	    curr_band = "band2"; 
 	}
 	else if (info->use_band_option == 3)
 	{
-            printf("[init_cursors]: band=3a\n"); 
 	    curr_band = "band3a"; 
 	}
 	else if (info->use_band_option == 4)
 	{
-            printf("[init_cursors]: band=3b\n"); 
 	    curr_band = "band3b"; 
 	}
 	else if (info->use_band_option == 5)
 	{
-            printf("[init_cursors]: band=3c\n"); 
 	    curr_band = "band3c"; 
 	}
 	else if (info->use_band_option == 6)
 	{
-            printf("[init_cursors]: band=4\n"); 
 	    curr_band = "band4"; 
 	}
 	else if (info->use_band_option == 7)
 	{
-            printf("[init_cursors]: band=5\n"); 
 	    curr_band = "band5"; 
 	}
 	else
@@ -638,9 +633,6 @@ static int init_versions(ingest_info *info)
     coda_cursor cursor;
     char product_name[84];
 
-    /* Since earlier S5P L2 products did not always have a valid 'id' global attribute
-     * we will keep the version numbers at -1 if we can't extract the right information.
-     */
     if (coda_cursor_set_product(&cursor, info->product) != 0)
     {
         harp_set_error(HARP_ERROR_CODA, NULL);
@@ -710,15 +702,11 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
     info->use_band_option = 0; 
 
 
-    printf("[ingestion_init]: get_product_type\n"); 
-
     if (get_product_type(info->product, &info->product_type) != 0)
     {
         ingestion_done(info);
         return -1;
     }
-
-    printf("[ingestion_init]: init_versions\n"); 
 
     if (init_versions(info) != 0)
     {
@@ -726,11 +714,7 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
         return -1;
     }
 
-    printf("[ingestion_init]: defition\n"); 
-
     *definition = *module->product_definition;
-
-    printf("[ingestion_init]: has_option\n"); 
 
     if (info->product_type == s5_type_uvr)
     {
@@ -741,22 +725,20 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
                 ingestion_done(info);
                 return -1;
             }
+
             if (strcmp(option_value, "1b") == 0)
             {
          	info->use_band_option = 1; 
-                printf("[ingestion_init]: band=1b\n"); 
             }
             else if (strcmp(option_value, "2") == 0)
             {
          	info->use_band_option = 2; 
-                printf("[ingestion_init]: band=2\n"); 
             }
             else
             {
                 /* Option values are guaranteed to be legal if present. */
                 assert(strcmp(option_value, "1a") == 0);
          	info->use_band_option = 0; 
-                printf("[ingestion_init]: band=1a\n"); 
             }
         }
     }
@@ -769,22 +751,20 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
                 ingestion_done(info);
                 return -1;
             }
+
             if (strcmp(option_value, "3b") == 0)
             {
          	info->use_band_option = 1; 
-                printf("[ingestion_init]: band=3b\n"); 
             }
             else if (strcmp(option_value, "3c") == 0)
             {
          	info->use_band_option = 2; 
-                printf("[ingestion_init]: band=3c\n"); 
             }
             else
             {
                 /* Option values are guaranteed to be legal if present. */
                 assert(strcmp(option_value, "3a") == 0);
          	info->use_band_option = 0; 
-                printf("[ingestion_init]: band=3a\n"); 
             }
         }
     }
@@ -797,21 +777,19 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
                 ingestion_done(info);
                 return -1;
             }
-            if (strcmp(option_value, "5") == 0)
+
+	    if (strcmp(option_value, "5") == 0)
             {
          	info->use_band_option = 1; 
-                printf("[ingestion_init]: band=5\n"); 
             }
             else
             {
                 /* Option values are guaranteed to be legal if present. */
                 assert(strcmp(option_value, "4") == 0);
          	info->use_band_option = 0; 
-                printf("[ingestion_init]: band=4\n"); 
             }
         }
     }
-    // band1a, band1b, band2, band3a, band3b, band3c, band4, band5
     else if (info->product_type == s5_type_irr)
     {
         if (harp_ingestion_options_has_option(options, "band"))
@@ -821,53 +799,45 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
                 ingestion_done(info);
                 return -1;
             }
+
             if (strcmp(option_value, "1b") == 0)
             {
          	info->use_band_option = 1; 
-                printf("[ingestion_init]: band=1b\n"); 
             }
-            if (strcmp(option_value, "2") == 0)
+	    else if (strcmp(option_value, "2") == 0)
             {
          	info->use_band_option = 2; 
-                printf("[ingestion_init]: band=2\n"); 
             }
-            if (strcmp(option_value, "3a") == 0)
+	    else if (strcmp(option_value, "3a") == 0)
             {
          	info->use_band_option = 3; 
-                printf("[ingestion_init]: band=3a\n"); 
             }
-            if (strcmp(option_value, "3b") == 0)
+	    else if (strcmp(option_value, "3b") == 0)
             {
          	info->use_band_option = 4; 
-                printf("[ingestion_init]: band=3b\n"); 
             }
-            if (strcmp(option_value, "3c") == 0)
+	    else if (strcmp(option_value, "3c") == 0)
             {
          	info->use_band_option = 5; 
-                printf("[ingestion_init]: band=3c\n"); 
             }
-            if (strcmp(option_value, "4") == 0)
+	    else if (strcmp(option_value, "4") == 0)
             {
          	info->use_band_option = 6; 
-                printf("[ingestion_init]: band=4\n"); 
             }
-            if (strcmp(option_value, "5") == 0)
+	    else if (strcmp(option_value, "5") == 0)
             {
          	info->use_band_option = 7; 
-                printf("[ingestion_init]: band=5\n"); 
             }
             else
             {
                 /* Option values are guaranteed to be legal if present. */
                 assert(strcmp(option_value, "1a") == 0);
          	info->use_band_option = 0; 
-                printf("[ingestion_init]: band=1a\n"); 
             }
         }
     }
 
 
-    printf("[ingestion_init]: init_cursors\n"); 
     if (init_cursors(info) != 0)
     {
         ingestion_done(info);
@@ -882,11 +852,6 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
         return -1;
     }
 
-
-    printf("[ingestion_init]: num_scanlines = %d\n", info->num_scanlines); 
-    printf("[ingestion_init]: num_pixels    = %d\n", info->num_pixels); 
-    printf("[ingestion_init]: num_corners   = %d\n", info->num_corners); 
-    printf("[ingestion_init]: num_spectral  = %d\n", info->num_spectral); 
 
     *user_data = info;
 
@@ -924,28 +889,6 @@ static int read_dimensions(void *user_data, long dimension[HARP_NUM_DIM_TYPES])
 
     dimension[harp_dimension_time]     = info->num_scanlines * info->num_pixels;
     dimension[harp_dimension_spectral] = info->num_spectral;
-
-    /* 2. vertical grid - only if available */
-    //if (info->num_layers > 0)
-    //{
-    //    dimension[harp_dimension_vertical] = info->num_layers;
-    //}
-
-    switch (info->product_type)
-    {
-        //case s5_type_aui:
-        //    dimension[harp_dimension_spectral] = info->num_spectral;
-        //    break;
-        //case s5_type_ch4:
-        //    dimension[harp_dimension_spectral] = info->num_spectral;
-        //    break;
-        //case s5_type_so2:
-        //    dimension[harp_dimension_time] = info->num_scanlines * info->num_pixels;
-        //    break;
-        //    /* CLD, NO2, CO, ... need no extra axes */
-        default:
-            break;
-    }
 
     return 0;
 }
@@ -1411,7 +1354,7 @@ static int read_observation_radiance_error(void *user_data, harp_array data)
         return -1;
     }
 
-    broadcast_array_int16(info->num_scanlines, info->num_pixels, data.int8_data);
+    broadcast_array_int8(info->num_scanlines, info->num_pixels, data.int8_data);
 
     return 0;
 }
@@ -1426,7 +1369,7 @@ static int read_observation_radiance_noise(void *user_data, harp_array data)
         return -1;
     }
 
-    broadcast_array_int16(info->num_scanlines, info->num_pixels, data.int8_data);
+    broadcast_array_int8(info->num_scanlines, info->num_pixels, data.int8_data);
 
     return 0;
 }
@@ -1441,7 +1384,7 @@ static int read_observation_spectral_channel_quality(void *user_data, harp_array
         return -1;
     }
 
-    broadcast_array_int16(info->num_scanlines, info->num_pixels, data.int8_data);
+    broadcast_array_int8(info->num_scanlines, info->num_pixels, data.int8_data);
 
     return 0;
 }
@@ -1469,7 +1412,7 @@ static int read_observation_irradiance_error(void *user_data, harp_array data)
         return -1;
     }
 
-    broadcast_array_int16(info->num_scanlines, info->num_pixels, data.int8_data);
+    broadcast_array_int8(info->num_scanlines, info->num_pixels, data.int8_data);
 
     return 0;
 }
@@ -1484,7 +1427,7 @@ static int read_observation_irradiance_noise(void *user_data, harp_array data)
         return -1;
     }
 
-    broadcast_array_int16(info->num_scanlines, info->num_pixels, data.int8_data);
+    broadcast_array_int8(info->num_scanlines, info->num_pixels, data.int8_data);
 
     return 0;
 }
@@ -1509,17 +1452,14 @@ static void register_mapping_per_band(
     {
         if (strcmp(variable_name, "datetime_start[]") == 0)
 	{
-            printf("[Bleh]Band %d: %s, %s, %s\n", i, bands_list[i], dataset_name, variable_name);
             snprintf(path, MAX_PATH_LENGTH, "/data/%s/%s/time, /data/%s/%s/delta_time[]", bands_list[i], dataset_name, bands_list[i], dataset_name);
             harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, description);
 	}
 	else 
 	{
-            printf("Band %d: %s, %s, %s\n", i, bands_list[i], dataset_name, variable_name);
             snprintf(path, MAX_PATH_LENGTH, "/data/%s/%s/%s", bands_list[i], dataset_name, variable_name);
             harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, description);
 	}
-    //path = "/data/band3a/observation_data/time, /data/band3a/observation_data/delta_time[]";
     }
 }
 
@@ -1545,7 +1485,6 @@ static void register_geolocation_variables(harp_product_definition
 			read_geolocation_latitude);
     harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
     description = NULL; 
-    //register_mapping_per_band(product_type, variable_definition, "latitude[]", "geolocation_data", bands_list, num_bands, description); 
     register_mapping_per_band(variable_definition, "latitude[]", "geolocation_data", bands_list, num_bands, description); 
 
     /* longitude */
@@ -1591,7 +1530,6 @@ static void register_geolocation_variables(harp_product_definition
                                                    dimension_type_1d, NULL, description, 
         					   "m",
                                                    NULL, read_geolocation_satellite_altitude);
-    //harp_variable_definition_set_valid_range_float(variable_definition, 700000.0f, 900000.0f);
 
     description = "the satellite altitude associated with a scanline is "
 	    "repeated for each pixel in the scanline";
@@ -1724,9 +1662,6 @@ static void register_observation_variables(harp_product_definition
     description = NULL; 
     register_mapping_per_band(variable_definition, "radiance[]", "observation_data", bands_list, num_bands, description); 
 
-    //snprintf(path, MAX_PATH_LENGTH, "/%s/STANDARD_MODE/OBSERVATIONS/radiance[]", product_group_name);
-    //harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, NULL);
-
     /* radiance_error */
     description = "Radiance error, encoded as 20 times the natural logarithmic "
 	    "value of the absolute ratio between the radiance and the estimation "
@@ -1785,7 +1720,7 @@ static void register_uvr_product(void)
     const char *band_option_values[3] = { "1a", "1b", "2" };
 
     const char* bands_list[3] = {"band=1a or band unset", "band=1b", "band2"};
-    int num_bands = sizeof(bands_list) / sizeof(bands_list[0]);
+    int num_bands = ARRAY_SIZE(bands_list); 
 
 
     /* Product Registration Phase */
@@ -1814,8 +1749,6 @@ static void register_uvr_product(void)
 
     register_geolocation_variables(product_definition, bands_list, num_bands);
     register_observation_variables(product_definition, bands_list, num_bands);
-    // TODO: Instrument Variables 
-
 }
 
 
@@ -1838,7 +1771,7 @@ static void register_nir_product(void)
     const char *band_option_values[3] = { "3a", "3b", "3c" };
 
     const char* bands_list[3] = {"band=3a or band unset", "band=3b", "band=3c"};
-    int num_bands = sizeof(bands_list) / sizeof(bands_list[0]);
+    int num_bands = ARRAY_SIZE(bands_list); 
 
 
     /* Product Registration Phase */
@@ -1867,8 +1800,6 @@ static void register_nir_product(void)
 
     register_geolocation_variables(product_definition, bands_list, num_bands);
     register_observation_variables(product_definition, bands_list, num_bands);
-    // TODO: Instrument Variables 
-
 }
 
 static void register_swr_product(void)
@@ -1888,7 +1819,7 @@ static void register_swr_product(void)
     const char *band_option_values[2] = { "4", "5" };
 
     const char* bands_list[2] = {"band=4 or band unset", "band=5"};
-    int num_bands = sizeof(bands_list) / sizeof(bands_list[0]);
+    int num_bands = ARRAY_SIZE(bands_list); 
 
 
     /* Product Registration Phase */
@@ -1917,7 +1848,6 @@ static void register_swr_product(void)
 
     register_geolocation_variables(product_definition, bands_list, num_bands);
     register_observation_variables(product_definition, bands_list, num_bands);
-    // TODO: Instrument Variables 
 
 }
 
@@ -1938,8 +1868,7 @@ static void register_irr_product(void)
     const char *band_option_values[8] = { "1a", "1b", "2", "3a", "3b", "3c", "4", "5" };
 
     const char* bands_list[8] = {"band=1a or band unset", "band=1b", "band=2", "band=3a", "band=3b", "band=3c", "band=4", "band=5"};
-    int num_bands = sizeof(bands_list) / sizeof(bands_list[0]);
-
+    int num_bands = ARRAY_SIZE(bands_list); 
 
     /* Product Registration Phase */
     description = "Sentinel-5 L1b IRR spectra";
@@ -1963,9 +1892,6 @@ static void register_irr_product(void)
 		    harp_type_int32, 0, NULL, NULL,
 		    description, NULL, NULL, read_orbit_index);
     harp_variable_definition_add_mapping(variable_definition, NULL, NULL, "/@orbit_start", NULL);
-
-
-    // TODO: Instrument Variables 
 
 
     /* Geolocation Data */  
