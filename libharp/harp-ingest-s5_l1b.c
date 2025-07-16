@@ -73,12 +73,11 @@ typedef enum s5_dimension_type_enum
 /* handy constant: last enum value + 1 */
 #define S5_NUM_DIM_TYPES   ((int)s5_dim_spectral + 1)
 
-static const char *s5_dimension_name[S5_NUM_PRODUCT_TYPES][S5_NUM_DIM_TYPES] = 
-{
-    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"}, /* UVR */
-    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"}, /* NIR */
-    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"}, /* SWR */
-    {"scanline", "pixel", NULL, "spectral_channel"},                   /* IRR */
+static const char *s5_dimension_name[S5_NUM_PRODUCT_TYPES][S5_NUM_DIM_TYPES] = {
+    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"},  /* UVR */
+    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"},  /* NIR */
+    {"scanline", "ground_pixel", "pixel_corners", "spectral_channel"},  /* SWR */
+    {"scanline", "pixel", NULL, "spectral_channel"},    /* IRR */
 };
 
 /* the array shape of delta_time variable for each data product */
@@ -88,15 +87,15 @@ typedef struct ingest_info_struct
 {
     coda_product *product;
 
-    coda_cursor product_cursor;     /* /data/band... */
-    coda_cursor geolocation_cursor; /* /data/band.../geolocation_data */
+    coda_cursor product_cursor; /* /data/band... */
+    coda_cursor geolocation_cursor;     /* /data/band.../geolocation_data */
     coda_cursor instrument_cursor;
     coda_cursor observation_cursor;
 
     coda_cursor sensor_mode_cursor;
     coda_cursor geo_data_cursor;
 
-    int use_band_option; 
+    int use_band_option;
 
     s5_product_type product_type;
     long num_scanlines;
@@ -107,7 +106,7 @@ typedef struct ingest_info_struct
     int processor_version;
     int collection_number;
 
-    uint8_t *surface_layer_status;      
+    uint8_t *surface_layer_status;
 } ingest_info;
 
 
@@ -419,104 +418,106 @@ static int get_dimension_length(ingest_info *info, const char *name, long *lengt
 static int init_cursors(ingest_info *info)
 {
     coda_cursor cursor;
-    char* curr_band; 
+    char *curr_band;
+
+    curr_band = NULL;
 
     /* Choosing the apropriate dataset based on the option chosen */
     if (info->product_type == s5_type_uvr)
     {
         if (info->use_band_option == 0)
-	{
-	    curr_band = "band1a"; 
-	}
-	else if (info->use_band_option == 1)
-	{
-	    curr_band = "band1b"; 
-	}
-	else if (info->use_band_option == 2)
-	{
-	    curr_band = "band2"; 
-	}
-	else
-	{
+        {
+            curr_band = "band1a";
+        }
+        else if (info->use_band_option == 1)
+        {
+            curr_band = "band1b";
+        }
+        else if (info->use_band_option == 2)
+        {
+            curr_band = "band2";
+        }
+        else
+        {
             harp_set_error(HARP_ERROR_CODA, NULL);
             return -1;
-	}
+        }
     }
     else if (info->product_type == s5_type_nir)
     {
         if (info->use_band_option == 0)
-	{
-	    curr_band = "band3a"; 
-	}
-	else if (info->use_band_option == 1)
-	{
-	    curr_band = "band3b"; 
-	}
-	else if (info->use_band_option == 2)
-	{
-	    curr_band = "band3c"; 
-	}
-	else
-	{
+        {
+            curr_band = "band3a";
+        }
+        else if (info->use_band_option == 1)
+        {
+            curr_band = "band3b";
+        }
+        else if (info->use_band_option == 2)
+        {
+            curr_band = "band3c";
+        }
+        else
+        {
             harp_set_error(HARP_ERROR_CODA, NULL);
             return -1;
-	}
+        }
     }
     else if (info->product_type == s5_type_swr)
     {
         if (info->use_band_option == 0)
-	{
-	    curr_band = "band4"; 
-	}
-	else if (info->use_band_option == 1)
-	{
-	    curr_band = "band5"; 
-	}
-	else
-	{
+        {
+            curr_band = "band4";
+        }
+        else if (info->use_band_option == 1)
+        {
+            curr_band = "band5";
+        }
+        else
+        {
             harp_set_error(HARP_ERROR_CODA, NULL);
             return -1;
-	}
+        }
     }
     else if (info->product_type == s5_type_irr)
     {
         if (info->use_band_option == 0)
-	{
-	    curr_band = "band1a"; 
-	}
-	else if (info->use_band_option == 1)
-	{
-	    curr_band = "band1b"; 
-	}
-	else if (info->use_band_option == 2)
-	{
-	    curr_band = "band2"; 
-	}
-	else if (info->use_band_option == 3)
-	{
-	    curr_band = "band3a"; 
-	}
-	else if (info->use_band_option == 4)
-	{
-	    curr_band = "band3b"; 
-	}
-	else if (info->use_band_option == 5)
-	{
-	    curr_band = "band3c"; 
-	}
-	else if (info->use_band_option == 6)
-	{
-	    curr_band = "band4"; 
-	}
-	else if (info->use_band_option == 7)
-	{
-	    curr_band = "band5"; 
-	}
-	else
-	{
+        {
+            curr_band = "band1a";
+        }
+        else if (info->use_band_option == 1)
+        {
+            curr_band = "band1b";
+        }
+        else if (info->use_band_option == 2)
+        {
+            curr_band = "band2";
+        }
+        else if (info->use_band_option == 3)
+        {
+            curr_band = "band3a";
+        }
+        else if (info->use_band_option == 4)
+        {
+            curr_band = "band3b";
+        }
+        else if (info->use_band_option == 5)
+        {
+            curr_band = "band3c";
+        }
+        else if (info->use_band_option == 6)
+        {
+            curr_band = "band4";
+        }
+        else if (info->use_band_option == 7)
+        {
+            curr_band = "band5";
+        }
+        else
+        {
             harp_set_error(HARP_ERROR_CODA, NULL);
             return -1;
-	}
+        }
     }
 
     /* Bind a cursor to the root of the CODA product */
@@ -615,7 +616,8 @@ static int init_dimensions(ingest_info *info)
     /* Get number of spectral channels and validate */
     if (s5_dimension_name[info->product_type][s5_dim_spectral] != NULL)
     {
-        if (get_dimension_length(info, s5_dimension_name[info->product_type][s5_dim_spectral], &info->num_spectral) != 0)
+        if (get_dimension_length(info, s5_dimension_name[info->product_type][s5_dim_spectral], &info->num_spectral) !=
+            0)
         {
             return -1;
         }
@@ -698,8 +700,8 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
     info->num_spectral = 0;
 
 
-    /* Each product has its own bands, which we convert into options */ 
-    info->use_band_option = 0; 
+    /* Each product has its own bands, which we convert into options */
+    info->use_band_option = 0;
 
 
     if (get_product_type(info->product, &info->product_type) != 0)
@@ -728,17 +730,17 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
 
             if (strcmp(option_value, "1b") == 0)
             {
-         	info->use_band_option = 1; 
+                info->use_band_option = 1;
             }
             else if (strcmp(option_value, "2") == 0)
             {
-         	info->use_band_option = 2; 
+                info->use_band_option = 2;
             }
             else
             {
                 /* Option values are guaranteed to be legal if present. */
                 assert(strcmp(option_value, "1a") == 0);
-         	info->use_band_option = 0; 
+                info->use_band_option = 0;
             }
         }
     }
@@ -754,17 +756,17 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
 
             if (strcmp(option_value, "3b") == 0)
             {
-         	info->use_band_option = 1; 
+                info->use_band_option = 1;
             }
             else if (strcmp(option_value, "3c") == 0)
             {
-         	info->use_band_option = 2; 
+                info->use_band_option = 2;
             }
             else
             {
                 /* Option values are guaranteed to be legal if present. */
                 assert(strcmp(option_value, "3a") == 0);
-         	info->use_band_option = 0; 
+                info->use_band_option = 0;
             }
         }
     }
@@ -778,15 +780,15 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
                 return -1;
             }
 
-	    if (strcmp(option_value, "5") == 0)
+            if (strcmp(option_value, "5") == 0)
             {
-         	info->use_band_option = 1; 
+                info->use_band_option = 1;
             }
             else
             {
                 /* Option values are guaranteed to be legal if present. */
                 assert(strcmp(option_value, "4") == 0);
-         	info->use_band_option = 0; 
+                info->use_band_option = 0;
             }
         }
     }
@@ -802,37 +804,37 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
 
             if (strcmp(option_value, "1b") == 0)
             {
-         	info->use_band_option = 1; 
+                info->use_band_option = 1;
             }
-	    else if (strcmp(option_value, "2") == 0)
+            else if (strcmp(option_value, "2") == 0)
             {
-         	info->use_band_option = 2; 
+                info->use_band_option = 2;
             }
-	    else if (strcmp(option_value, "3a") == 0)
+            else if (strcmp(option_value, "3a") == 0)
             {
-         	info->use_band_option = 3; 
+                info->use_band_option = 3;
             }
-	    else if (strcmp(option_value, "3b") == 0)
+            else if (strcmp(option_value, "3b") == 0)
             {
-         	info->use_band_option = 4; 
+                info->use_band_option = 4;
             }
-	    else if (strcmp(option_value, "3c") == 0)
+            else if (strcmp(option_value, "3c") == 0)
             {
-         	info->use_band_option = 5; 
+                info->use_band_option = 5;
             }
-	    else if (strcmp(option_value, "4") == 0)
+            else if (strcmp(option_value, "4") == 0)
             {
-         	info->use_band_option = 6; 
+                info->use_band_option = 6;
             }
-	    else if (strcmp(option_value, "5") == 0)
+            else if (strcmp(option_value, "5") == 0)
             {
-         	info->use_band_option = 7; 
+                info->use_band_option = 7;
             }
             else
             {
                 /* Option values are guaranteed to be legal if present. */
                 assert(strcmp(option_value, "1a") == 0);
-         	info->use_band_option = 0; 
+                info->use_band_option = 0;
             }
         }
     }
@@ -887,7 +889,7 @@ static int read_dimensions(void *user_data, long dimension[HARP_NUM_DIM_TYPES])
      */
 
 
-    dimension[harp_dimension_time]     = info->num_scanlines * info->num_pixels;
+    dimension[harp_dimension_time] = info->num_scanlines * info->num_pixels;
     dimension[harp_dimension_spectral] = info->num_spectral;
 
     return 0;
@@ -1269,7 +1271,8 @@ static int read_geolocation_satellite_orbit_phase(void *user_data, harp_array da
 {
     ingest_info *info = (ingest_info *)user_data;
 
-    if (read_dataset(info->geolocation_cursor, "satellite_orbit_phase", harp_type_float, info->num_scanlines, data) != 0)
+    if (read_dataset(info->geolocation_cursor, "satellite_orbit_phase", harp_type_float, info->num_scanlines, data) !=
+        0)
     {
         return -1;
     }
@@ -1439,101 +1442,98 @@ static int read_observation_irradiance_noise(void *user_data, harp_array data)
  * Products' Registration Routines 
  */
 
-static void register_mapping_per_band(
-		harp_variable_definition *variable_definition, 
-		const char* variable_name, const char* dataset_name,  
-		const char* bands_list[], int num_bands, const char* description)
+static void register_mapping_per_band(harp_variable_definition *variable_definition,
+                                      const char *variable_name, const char *dataset_name,
+                                      const char *bands_list[], int num_bands, const char *description)
 {
-    int i; 
+    int i;
     char path[MAX_PATH_LENGTH];
 
 
-    for (i = 0; i < num_bands; i++) 
+    for (i = 0; i < num_bands; i++)
     {
         if (strcmp(variable_name, "datetime_start[]") == 0)
-	{
-            snprintf(path, MAX_PATH_LENGTH, "/data/%s/%s/time, /data/%s/%s/delta_time[]", bands_list[i], dataset_name, bands_list[i], dataset_name);
+        {
+            snprintf(path, MAX_PATH_LENGTH, "/data/%s/%s/time, /data/%s/%s/delta_time[]", bands_list[i], dataset_name,
+                     bands_list[i], dataset_name);
             harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, description);
-	}
-	else 
-	{
+        }
+        else
+        {
             snprintf(path, MAX_PATH_LENGTH, "/data/%s/%s/%s", bands_list[i], dataset_name, variable_name);
             harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, description);
-	}
+        }
     }
 }
 
 static void register_geolocation_variables(harp_product_definition
-		*product_definition, const char* bands_list[], int num_bands)
+                                           *product_definition, const char *bands_list[], int num_bands)
 {
-    const char *path;
     const char *description;
 
     harp_variable_definition *variable_definition;
 
     harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
     harp_dimension_type dimension_type_2d[2] = { harp_dimension_time, harp_dimension_independent };
-    harp_dimension_type dimension_type_2d_spec[2] = { harp_dimension_time, harp_dimension_spectral };
     long bounds_dimension[2] = { -1, 4 };
 
     /* latitude */
     description = "Latitude of the center of each ground pixel on the WGS84 reference ellipsoid.";
     variable_definition =
-	harp_ingestion_register_variable_full_read(product_definition,
-			"latitude", harp_type_float, 1, dimension_type_1d,
-			NULL, description, "degree_north", NULL,
-			read_geolocation_latitude);
+        harp_ingestion_register_variable_full_read(product_definition,
+                                                   "latitude", harp_type_float, 1, dimension_type_1d,
+                                                   NULL, description, "degree_north", NULL, read_geolocation_latitude);
     harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "latitude[]", "geolocation_data", bands_list, num_bands, description); 
+    description = NULL;
+    register_mapping_per_band(variable_definition, "latitude[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* longitude */
     description = "Longitude of the center of each ground pixel on the WGS84 reference ellipsoid.";
     variable_definition =
-	harp_ingestion_register_variable_full_read(product_definition,
-			"longitude", harp_type_float, 1, dimension_type_1d,
-			NULL, description, "degree_east", NULL,
-			read_geolocation_longitude);
+        harp_ingestion_register_variable_full_read(product_definition,
+                                                   "longitude", harp_type_float, 1, dimension_type_1d,
+                                                   NULL, description, "degree_east", NULL, read_geolocation_longitude);
     harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "longitude[]", "geolocation_data", bands_list, num_bands, description); 
+    description = NULL;
+    register_mapping_per_band(variable_definition, "longitude[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
 
     /* latitude_bounds */
     description = "The four latitude boundaries of each ground pixel on the WGS84 reference ellipsoid.";
     variable_definition =
-	harp_ingestion_register_variable_full_read(product_definition,
-			"latitude_bounds", harp_type_float, 2,
-			dimension_type_2d, bounds_dimension, description,
-			"degree_north", NULL,
-			read_geolocation_latitude_bounds);
+        harp_ingestion_register_variable_full_read(product_definition,
+                                                   "latitude_bounds", harp_type_float, 2,
+                                                   dimension_type_2d, bounds_dimension, description,
+                                                   "degree_north", NULL, read_geolocation_latitude_bounds);
     harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "latitude_bounds[]", "geolocation_data", bands_list, num_bands, description); 
+    description = NULL;
+    register_mapping_per_band(variable_definition, "latitude_bounds[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* longitude_bounds */
     description = "The four longitude boundaries of each ground pixel on the WGS84 reference ellipsoid.";
     variable_definition =
-	harp_ingestion_register_variable_full_read(product_definition,
-			"longitude_bounds", harp_type_float, 2,
-			dimension_type_2d, bounds_dimension, description,
-			"degree_east", NULL,
-			read_geolocation_longitude_bounds);
+        harp_ingestion_register_variable_full_read(product_definition,
+                                                   "longitude_bounds", harp_type_float, 2,
+                                                   dimension_type_2d, bounds_dimension, description,
+                                                   "degree_east", NULL, read_geolocation_longitude_bounds);
     harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "longitude_bounds[]", "geolocation_data", bands_list, num_bands, description); 
+    description = NULL;
+    register_mapping_per_band(variable_definition, "longitude_bounds[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* satellite_altitude */
     description = "The altitude of the spacecraft relative to the WGS84 reference ellipsoid.";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "sensor_altitude", harp_type_int32, 1,
-                                                   dimension_type_1d, NULL, description, 
-        					   "m",
-                                                   NULL, read_geolocation_satellite_altitude);
+                                                   dimension_type_1d, NULL, description,
+                                                   "m", NULL, read_geolocation_satellite_altitude);
 
-    description = "the satellite altitude associated with a scanline is "
-	    "repeated for each pixel in the scanline";
-    register_mapping_per_band(variable_definition, "satellite_altitude[]", "geolocation_data", bands_list, num_bands, description); 
+    description = "the satellite altitude associated with a scanline is " "repeated for each pixel in the scanline";
+    register_mapping_per_band(variable_definition, "satellite_altitude[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* satellite_latitude */
     description = "Latitude of the spacecraft sub-satellite point on the WGS84 reference ellipsoid.";
@@ -1543,7 +1543,8 @@ static void register_geolocation_variables(harp_product_definition
                                                    read_geolocation_satellite_latitude);
     harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
     description = "the satellite latitude associated with a scanline is repeated for each pixel in the scanline";
-    register_mapping_per_band(variable_definition, "satellite_latitude[]", "geolocation_data", bands_list, num_bands, description); 
+    register_mapping_per_band(variable_definition, "satellite_latitude[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* satellite_longitude */
     description = "Longitude of the spacecraft sub-satellite point on the WGS84 reference ellipsoid.";
@@ -1553,18 +1554,20 @@ static void register_geolocation_variables(harp_product_definition
                                                    read_geolocation_satellite_longitude);
     harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
     description = "the satellite longitude associated with a scanline is repeated for each pixel in the scanline";
-    register_mapping_per_band(variable_definition, "satellite_longitude[]", "geolocation_data", bands_list, num_bands, description); 
+    register_mapping_per_band(variable_definition, "satellite_longitude[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* satellite_orbit_phase */
     description = "Relative offset (0.0 ... 1.0) of the measurement in the orbit.";
     variable_definition =
-	harp_ingestion_register_variable_full_read(product_definition,
-			"sensor_orbit_phase", harp_type_float, 1,
-			dimension_type_1d, NULL, description,
-			HARP_UNIT_DIMENSIONLESS, NULL,
-			read_geolocation_satellite_orbit_phase);
+        harp_ingestion_register_variable_full_read(product_definition,
+                                                   "sensor_orbit_phase", harp_type_float, 1,
+                                                   dimension_type_1d, NULL, description,
+                                                   HARP_UNIT_DIMENSIONLESS, NULL,
+                                                   read_geolocation_satellite_orbit_phase);
     description = "the satellite orbit phase associated with a scanline is repeated for each pixel in the scanline";
-    register_mapping_per_band(variable_definition, "satellite_orbit_phase[]", "geolocation_data", bands_list, num_bands, description); 
+    register_mapping_per_band(variable_definition, "satellite_orbit_phase[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* solar_zenith_angle */
     description = "Zenith angle of the sun at the ground pixel location on the WGS84 reference ellipsoid.";
@@ -1573,8 +1576,9 @@ static void register_geolocation_variables(harp_product_definition
                                                    dimension_type_1d, NULL, description, "degree", NULL,
                                                    read_geolocation_solar_zenith_angle);
     harp_variable_definition_set_valid_range_float(variable_definition, 0.0f, 180.0f);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "solar_zenith_angle[]", "geolocation_data", bands_list, num_bands, description); 
+    description = NULL;
+    register_mapping_per_band(variable_definition, "solar_zenith_angle[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* solar_azimuth_angle */
     description = "Azimuth angle of the sun at the ground pixel location on the WGS84 ellipsoid.";
@@ -1584,143 +1588,134 @@ static void register_geolocation_variables(harp_product_definition
                                                    read_geolocation_solar_azimuth_angle);
     harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
 
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "solar_azimuth_angle[]", "geolocation_data", bands_list, num_bands, description); 
+    description = NULL;
+    register_mapping_per_band(variable_definition, "solar_azimuth_angle[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* viewing_zenith_angle */
-    description =
-        "Zenith angle of the spacecraft at the ground pixel location on the WGS84 reference ellipsoid.";
+    description = "Zenith angle of the spacecraft at the ground pixel location on the WGS84 reference ellipsoid.";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "sensor_zenith_angle", harp_type_float, 1,
                                                    dimension_type_1d, NULL, description, "degree", NULL,
                                                    read_geolocation_viewing_zenith_angle);
     harp_variable_definition_set_valid_range_float(variable_definition, 0.0f, 180.0f);
 
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "viewing_zenith_angle[]", "geolocation_data", bands_list, num_bands, description); 
+    description = NULL;
+    register_mapping_per_band(variable_definition, "viewing_zenith_angle[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* viewing_azimuth_angle */
-    description = "Azimuth angle of the spacecraft at the ground pixel location on the WGS84 reference ellipsoid."; 
+    description = "Azimuth angle of the spacecraft at the ground pixel location on the WGS84 reference ellipsoid.";
     variable_definition =
-	harp_ingestion_register_variable_full_read(product_definition,
-			"sensor_azimuth_angle", harp_type_float, 1,
-			dimension_type_1d, NULL, description, "degree", NULL,
-			read_geolocation_viewing_azimuth_angle);
+        harp_ingestion_register_variable_full_read(product_definition,
+                                                   "sensor_azimuth_angle", harp_type_float, 1,
+                                                   dimension_type_1d, NULL, description, "degree", NULL,
+                                                   read_geolocation_viewing_azimuth_angle);
     harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
 
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "viewing_azimuth_angle[]", "geolocation_data", bands_list, num_bands, description); 
+    description = NULL;
+    register_mapping_per_band(variable_definition, "viewing_azimuth_angle[]", "geolocation_data", bands_list, num_bands,
+                              description);
 }
 
 
 static void register_observation_variables(harp_product_definition
-		*product_definition, const char* bands_list[], int num_bands)
+                                           *product_definition, const char *bands_list[], int num_bands)
 {
-    const char *path;
     const char *description;
 
     harp_variable_definition *variable_definition;
 
     harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
-    harp_dimension_type dimension_type_2d[2] = { harp_dimension_time, harp_dimension_independent };
     harp_dimension_type dimension_type_2d_spec[2] = { harp_dimension_time, harp_dimension_spectral };
-    long bounds_dimension[2] = { -1, 4 };
-
 
     /* measurement_quality */
     description = "Overall quality information for a measurement.";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "measurement_quality", harp_type_int16, 1,
-                                                   dimension_type_1d, NULL, description, 
-        					   HARP_UNIT_DIMENSIONLESS,
-                                                   NULL, read_observation_measurement_quality);
+                                                   dimension_type_1d, NULL, description,
+                                                   HARP_UNIT_DIMENSIONLESS, NULL, read_observation_measurement_quality);
 
     description = "the measurement quality associated with a scanline is repeated for each pixel in the scanline";
-    register_mapping_per_band(variable_definition, "measurement_quality[]", "observation_data", bands_list, num_bands, description); 
+    register_mapping_per_band(variable_definition, "measurement_quality[]", "observation_data", bands_list, num_bands,
+                              description);
 
     /* datetime_start */
     description = "Start time of the measurement.";
-    variable_definition = 
-	    harp_ingestion_register_variable_full_read(product_definition, "datetime_start", 
-			                             harp_type_double, 1,
-                                                     dimension_type_1d, NULL, description, 
-						     "seconds since 2010-01-01", NULL,
-                                                     read_datetime);
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "datetime_start", harp_type_double, 1,
+                                                   dimension_type_1d, NULL, description,
+                                                   "seconds since 2010-01-01", NULL, read_datetime);
 
     description = "time converted from milliseconds since a reference time"
-        "(given as seconds since 2010-01-01) to " 
-	"seconds since" "2010-01-01 (using 86400 seconds per day)";
+        "(given as seconds since 2010-01-01) to " "seconds since" "2010-01-01 (using 86400 seconds per day)";
 
-    register_mapping_per_band(variable_definition, "datetime_start[]", "observation_data", bands_list, num_bands, description); 
+    register_mapping_per_band(variable_definition, "datetime_start[]", "observation_data", bands_list, num_bands,
+                              description);
 
-    /* radiance */ 
+    /* radiance */
     description = "Measured spectral photon radiance for each spectral channel.";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "photon_radiance", harp_type_float, 2,
-                                                    dimension_type_2d_spec, NULL, description, 
-        					    "mol/(s.m^2.nm.sr)", NULL, read_observation_radiance);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "radiance[]", "observation_data", bands_list, num_bands, description); 
+                                                   dimension_type_2d_spec, NULL, description,
+                                                   "mol/(s.m^2.nm.sr)", NULL, read_observation_radiance);
+    description = NULL;
+    register_mapping_per_band(variable_definition, "radiance[]", "observation_data", bands_list, num_bands,
+                              description);
 
     /* radiance_error */
     description = "Radiance error, encoded as 20 times the natural logarithmic "
-	    "value of the absolute ratio between the radiance and the estimation "
-	    "error.";
+        "value of the absolute ratio between the radiance and the estimation " "error.";
     variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, 
-			                           "photon_radiance_uncertainty_systematic",
-                                                   harp_type_int8, 2, dimension_type_2d_spec, 
-						   NULL, description,
-                                                   "mol/(s.m^2.nm.sr)", 
-						   NULL, read_observation_radiance_error);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "radiance_error[]", "observation_data", bands_list, num_bands, description); 
+        harp_ingestion_register_variable_full_read(product_definition,
+                                                   "photon_radiance_uncertainty_systematic",
+                                                   harp_type_int8, 2, dimension_type_2d_spec,
+                                                   NULL, description,
+                                                   "mol/(s.m^2.nm.sr)", NULL, read_observation_radiance_error);
+    description = NULL;
+    register_mapping_per_band(variable_definition, "radiance_error[]", "observation_data", bands_list, num_bands,
+                              description);
 
     /* radiance_noise */
     description = "Random radiance error, encoded as 20 times the natural logarithmic "
-	    "value of the absolute ratio between the radiance and the random error.";
+        "value of the absolute ratio between the radiance and the random error.";
     variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, 
-			                           "photon_radiance_uncertainty_random",
-                                                   harp_type_int8, 2, dimension_type_2d_spec, 
-						   NULL, description,
-                                                   "mol/(s.m^2.nm.sr)", 
-						   NULL, read_observation_radiance_noise);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "radiance_noise[]", "observation_data", bands_list, num_bands, description); 
+        harp_ingestion_register_variable_full_read(product_definition,
+                                                   "photon_radiance_uncertainty_random",
+                                                   harp_type_int8, 2, dimension_type_2d_spec,
+                                                   NULL, description,
+                                                   "mol/(s.m^2.nm.sr)", NULL, read_observation_radiance_noise);
+    description = NULL;
+    register_mapping_per_band(variable_definition, "radiance_noise[]", "observation_data", bands_list, num_bands,
+                              description);
 
     /* spectral_channel_quality */
     description = "Quality assessment information for each (spectral) channel.";
     variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, 
-			                           "spectral_channel_quality",
-                                                   harp_type_int8, 2, dimension_type_2d_spec, 
-						   NULL, description,
-                                                   HARP_UNIT_DIMENSIONLESS, 
-						   NULL, read_observation_spectral_channel_quality);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "spectral_channel_quality[]", "observation_data", bands_list, num_bands, description); 
+        harp_ingestion_register_variable_full_read(product_definition,
+                                                   "spectral_channel_quality",
+                                                   harp_type_int8, 2, dimension_type_2d_spec,
+                                                   NULL, description,
+                                                   HARP_UNIT_DIMENSIONLESS,
+                                                   NULL, read_observation_spectral_channel_quality);
+    description = NULL;
+    register_mapping_per_band(variable_definition, "spectral_channel_quality[]", "observation_data", bands_list,
+                              num_bands, description);
 }
 
 
 static void register_uvr_product(void)
 {
-    const char *path;
     const char *description;
 
     harp_ingestion_module *module;
     harp_product_definition *product_definition;
     harp_variable_definition *variable_definition;
 
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
-    harp_dimension_type dimension_type_2d[2] = { harp_dimension_time, harp_dimension_independent };
-    harp_dimension_type dimension_type_2d_spec[2] = { harp_dimension_time, harp_dimension_spectral };
-    long bounds_dimension[2] = { -1, 4 };
-
     const char *band_option_values[3] = { "1a", "1b", "2" };
 
-    const char* bands_list[3] = {"band=1a or band unset", "band=1b", "band2"};
-    int num_bands = ARRAY_SIZE(bands_list); 
+    const char *bands_list[3] = { "band=1a or band unset", "band=1b", "band2" };
+    int num_bands = ARRAY_SIZE(bands_list);
 
 
     /* Product Registration Phase */
@@ -1728,7 +1723,7 @@ static void register_uvr_product(void)
     module = harp_ingestion_register_module("SN5_1B_UVR", "Sentinel-5", "EPS_SG", "SN5_1B_UVR",
                                             description, ingestion_init, ingestion_done);
 
-    /* Option Registration Phase */ 
+    /* Option Registration Phase */
     description = "Choose which SWR band values to ingest: `band1a` (default), `band1b`, or `band2`";
     harp_ingestion_register_option(module, "band",      /* option name */
                                    description, 3,      /* number of values */
@@ -1741,9 +1736,9 @@ static void register_uvr_product(void)
 
     /* orbit_index */
     description = "absolute orbit number";
-    variable_definition = harp_ingestion_register_variable_full_read(product_definition, "orbit_index", 
-		    harp_type_int32, 0, NULL, NULL,
-		    description, NULL, NULL, read_orbit_index);
+    variable_definition = harp_ingestion_register_variable_full_read(product_definition, "orbit_index",
+                                                                     harp_type_int32, 0, NULL, NULL,
+                                                                     description, NULL, NULL, read_orbit_index);
     harp_variable_definition_add_mapping(variable_definition, NULL, NULL, "/@orbit_start", NULL);
 
 
@@ -1752,26 +1747,18 @@ static void register_uvr_product(void)
 }
 
 
-
-
 static void register_nir_product(void)
 {
-    const char *path;
     const char *description;
 
     harp_ingestion_module *module;
     harp_product_definition *product_definition;
     harp_variable_definition *variable_definition;
 
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
-    harp_dimension_type dimension_type_2d[2] = { harp_dimension_time, harp_dimension_independent };
-    harp_dimension_type dimension_type_2d_spec[2] = { harp_dimension_time, harp_dimension_spectral };
-    long bounds_dimension[2] = { -1, 4 };
-
     const char *band_option_values[3] = { "3a", "3b", "3c" };
 
-    const char* bands_list[3] = {"band=3a or band unset", "band=3b", "band=3c"};
-    int num_bands = ARRAY_SIZE(bands_list); 
+    const char *bands_list[3] = { "band=3a or band unset", "band=3b", "band=3c" };
+    int num_bands = ARRAY_SIZE(bands_list);
 
 
     /* Product Registration Phase */
@@ -1779,7 +1766,7 @@ static void register_nir_product(void)
     module = harp_ingestion_register_module("SN5_1B_NIR", "Sentinel-5", "EPS_SG", "SN5_1B_NIR",
                                             description, ingestion_init, ingestion_done);
 
-    /* Option Registration Phase */ 
+    /* Option Registration Phase */
     description = "Choose which NIR band values to ingest: `band3a` (default), `band3b`, or `band3c`";
     harp_ingestion_register_option(module, "band",      /* option name */
                                    description, 3,      /* number of values */
@@ -1792,9 +1779,9 @@ static void register_nir_product(void)
 
     /* orbit_index */
     description = "absolute orbit number";
-    variable_definition = harp_ingestion_register_variable_full_read(product_definition, "orbit_index", 
-		    harp_type_int32, 0, NULL, NULL,
-		    description, NULL, NULL, read_orbit_index);
+    variable_definition = harp_ingestion_register_variable_full_read(product_definition, "orbit_index",
+                                                                     harp_type_int32, 0, NULL, NULL,
+                                                                     description, NULL, NULL, read_orbit_index);
     harp_variable_definition_add_mapping(variable_definition, NULL, NULL, "/@orbit_start", NULL);
 
 
@@ -1804,22 +1791,17 @@ static void register_nir_product(void)
 
 static void register_swr_product(void)
 {
-    const char *path;
     const char *description;
 
     harp_ingestion_module *module;
     harp_product_definition *product_definition;
     harp_variable_definition *variable_definition;
 
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
-    harp_dimension_type dimension_type_2d[2] = { harp_dimension_time, harp_dimension_independent };
-    harp_dimension_type dimension_type_2d_spec[2] = { harp_dimension_time, harp_dimension_spectral };
-    long bounds_dimension[2] = { -1, 4 };
 
     const char *band_option_values[2] = { "4", "5" };
 
-    const char* bands_list[2] = {"band=4 or band unset", "band=5"};
-    int num_bands = ARRAY_SIZE(bands_list); 
+    const char *bands_list[2] = { "band=4 or band unset", "band=5" };
+    int num_bands = ARRAY_SIZE(bands_list);
 
 
     /* Product Registration Phase */
@@ -1827,7 +1809,7 @@ static void register_swr_product(void)
     module = harp_ingestion_register_module("SN5_1B_SWR", "Sentinel-5", "EPS_SG", "SN5_1B_SWR",
                                             description, ingestion_init, ingestion_done);
 
-    /* Option Registration Phase */ 
+    /* Option Registration Phase */
     description = "Choose which SWR band values to ingest: `band4` (default), or `band5`";
     harp_ingestion_register_option(module, "band",      /* option name */
                                    description, 2,      /* number of values */
@@ -1840,9 +1822,9 @@ static void register_swr_product(void)
 
     /* orbit_index */
     description = "absolute orbit number";
-    variable_definition = harp_ingestion_register_variable_full_read(product_definition, "orbit_index", 
-		    harp_type_int32, 0, NULL, NULL,
-		    description, NULL, NULL, read_orbit_index);
+    variable_definition = harp_ingestion_register_variable_full_read(product_definition, "orbit_index",
+                                                                     harp_type_int32, 0, NULL, NULL,
+                                                                     description, NULL, NULL, read_orbit_index);
     harp_variable_definition_add_mapping(variable_definition, NULL, NULL, "/@orbit_start", NULL);
 
 
@@ -1853,7 +1835,6 @@ static void register_swr_product(void)
 
 static void register_irr_product(void)
 {
-    const char *path;
     const char *description;
 
     harp_ingestion_module *module;
@@ -1861,22 +1842,22 @@ static void register_irr_product(void)
     harp_variable_definition *variable_definition;
 
     harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
-    harp_dimension_type dimension_type_2d[2] = { harp_dimension_time, harp_dimension_independent };
     harp_dimension_type dimension_type_2d_spec[2] = { harp_dimension_time, harp_dimension_spectral };
-    long bounds_dimension[2] = { -1, 4 };
 
     const char *band_option_values[8] = { "1a", "1b", "2", "3a", "3b", "3c", "4", "5" };
 
-    const char* bands_list[8] = {"band=1a or band unset", "band=1b", "band=2", "band=3a", "band=3b", "band=3c", "band=4", "band=5"};
-    int num_bands = ARRAY_SIZE(bands_list); 
+    const char *bands_list[8] =
+        { "band=1a or band unset", "band=1b", "band=2", "band=3a", "band=3b", "band=3c", "band=4", "band=5" };
+    int num_bands = ARRAY_SIZE(bands_list);
 
     /* Product Registration Phase */
     description = "Sentinel-5 L1b IRR spectra";
     module = harp_ingestion_register_module("SN5_1B_IRR", "Sentinel-5", "EPS_SG", "SN5_1B_IRR",
                                             description, ingestion_init, ingestion_done);
 
-    /* Option Registration Phase */ 
-    description = "Choose which IRR band values to ingest: `band1a` (default), `band1b`, `band2`, `band3a`, `band3b`, `band3c`, `band4`, or `band5`";
+    /* Option Registration Phase */
+    description =
+        "Choose which IRR band values to ingest: `band1a` (default), `band1b`, `band2`, `band3a`, `band3b`, `band3c`, `band4`, or `band5`";
     harp_ingestion_register_option(module, "band",      /* option name */
                                    description, 8,      /* number of values */
                                    band_option_values); /* allowed values */
@@ -1888,26 +1869,24 @@ static void register_irr_product(void)
 
     /* orbit_index */
     description = "absolute orbit number";
-    variable_definition = harp_ingestion_register_variable_full_read(product_definition, "orbit_index", 
-		    harp_type_int32, 0, NULL, NULL,
-		    description, NULL, NULL, read_orbit_index);
+    variable_definition = harp_ingestion_register_variable_full_read(product_definition, "orbit_index",
+                                                                     harp_type_int32, 0, NULL, NULL,
+                                                                     description, NULL, NULL, read_orbit_index);
     harp_variable_definition_add_mapping(variable_definition, NULL, NULL, "/@orbit_start", NULL);
 
 
-    /* Geolocation Data */  
-    
+    /* Geolocation Data */
+
     /* satellite_altitude */
     description = "The altitude of the spacecraft relative to the WGS84 reference ellipsoid.";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "sensor_altitude", harp_type_int32, 1,
-                                                   dimension_type_1d, NULL, description, 
-        					   "m",
-                                                   NULL, read_geolocation_satellite_altitude);
-    //harp_variable_definition_set_valid_range_float(variable_definition, 700000.0f, 900000.0f);
+                                                   dimension_type_1d, NULL, description,
+                                                   "m", NULL, read_geolocation_satellite_altitude);
 
-    description = "the satellite altitude associated with a scanline is "
-	    "repeated for each pixel in the scanline";
-    register_mapping_per_band(variable_definition, "satellite_altitude[]", "geolocation_data", bands_list, num_bands, description); 
+    description = "the satellite altitude associated with a scanline is " "repeated for each pixel in the scanline";
+    register_mapping_per_band(variable_definition, "satellite_altitude[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* satellite_latitude */
     description = "Latitude of the spacecraft sub-satellite point on the WGS84 reference ellipsoid.";
@@ -1917,7 +1896,8 @@ static void register_irr_product(void)
                                                    read_geolocation_satellite_latitude);
     harp_variable_definition_set_valid_range_float(variable_definition, -90.0f, 90.0f);
     description = "the satellite latitude associated with a scanline is repeated for each pixel in the scanline";
-    register_mapping_per_band(variable_definition, "satellite_latitude[]", "geolocation_data", bands_list, num_bands, description); 
+    register_mapping_per_band(variable_definition, "satellite_latitude[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* satellite_longitude */
     description = "Longitude of the spacecraft sub-satellite point on the WGS84 reference ellipsoid.";
@@ -1927,92 +1907,92 @@ static void register_irr_product(void)
                                                    read_geolocation_satellite_longitude);
     harp_variable_definition_set_valid_range_float(variable_definition, -180.0f, 180.0f);
     description = "the satellite longitude associated with a scanline is repeated for each pixel in the scanline";
-    register_mapping_per_band(variable_definition, "satellite_longitude[]", "geolocation_data", bands_list, num_bands, description); 
+    register_mapping_per_band(variable_definition, "satellite_longitude[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
     /* satellite_orbit_phase */
     description = "Relative offset (0.0 ... 1.0) of the measurement in the orbit.";
     variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition,
-        		"sensor_orbit_phase", harp_type_float, 1,
-        		dimension_type_1d, NULL, description,
-        		HARP_UNIT_DIMENSIONLESS, NULL,
-        		read_geolocation_satellite_orbit_phase);
+        harp_ingestion_register_variable_full_read(product_definition, "sensor_orbit_phase", harp_type_float, 1,
+                                                   dimension_type_1d, NULL, description, HARP_UNIT_DIMENSIONLESS,
+                                                   NULL, read_geolocation_satellite_orbit_phase);
     description = "the satellite orbit phase associated with a scanline is repeated for each pixel in the scanline";
-    register_mapping_per_band(variable_definition, "satellite_orbit_phase[]", "geolocation_data", bands_list, num_bands, description); 
+    register_mapping_per_band(variable_definition, "satellite_orbit_phase[]", "geolocation_data", bands_list, num_bands,
+                              description);
 
 
-    /* Observation Data */  
+    /* Observation Data */
 
     /* measurement_quality */
     description = "Overall quality information for a measurement.";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "measurement_quality", harp_type_int16, 1,
-                                                   dimension_type_1d, NULL, description, 
-        					   HARP_UNIT_DIMENSIONLESS,
-                                                   NULL, read_observation_measurement_quality);
+                                                   dimension_type_1d, NULL, description, HARP_UNIT_DIMENSIONLESS, NULL,
+                                                   read_observation_measurement_quality);
 
     description = "the measurement quality associated with a scanline is repeated for each pixel in the scanline";
-    register_mapping_per_band(variable_definition, "measurement_quality[]", "observation_data", bands_list, num_bands, description); 
+    register_mapping_per_band(variable_definition, "measurement_quality[]", "observation_data", bands_list, num_bands,
+                              description);
 
     /* datetime_start */
     description = "Start time of the measurement.";
-    variable_definition = 
-            harp_ingestion_register_variable_full_read(product_definition, "datetime_start", 
-        		                             harp_type_double, 1,
-                                                     dimension_type_1d, NULL, description, 
-        					     "seconds since 2010-01-01", NULL,
-                                                     read_datetime);
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "datetime_start",
+                                                   harp_type_double, 1,
+                                                   dimension_type_1d, NULL, description,
+                                                   "seconds since 2010-01-01", NULL, read_datetime);
 
     description = "time converted from milliseconds since a reference time"
-        "(given as seconds since 2010-01-01) to " 
-        "seconds since" "2010-01-01 (using 86400 seconds per day)";
+        "(given as seconds since 2010-01-01) to " "seconds since" "2010-01-01 (using 86400 seconds per day)";
 
-    register_mapping_per_band(variable_definition, "datetime_start[]", "observation_data", bands_list, num_bands, description); 
+    register_mapping_per_band(variable_definition, "datetime_start[]", "observation_data", bands_list, num_bands,
+                              description);
 
-    /* irradiance */ 
+    /* irradiance */
     description = "Measured spectral photon irradiance for each spectral channel and cross track position.";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "photon_irradiance", harp_type_float, 2,
-                                                    dimension_type_2d_spec, NULL, description, 
-        					    "mol/(s.m^2.nm)", NULL, read_observation_irradiance);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "irradiance[]", "observation_data", bands_list, num_bands, description); 
+                                                   dimension_type_2d_spec, NULL, description,
+                                                   "mol/(s.m^2.nm)", NULL, read_observation_irradiance);
+    description = NULL;
+    register_mapping_per_band(variable_definition, "irradiance[]", "observation_data", bands_list, num_bands,
+                              description);
 
 
     /* irradiance_error */
     description = "Irradiance error, encoded as 20 times the natural logarithmic "
-	    "value of the absolute ratio between the irradiance and the estimation error.";
+        "value of the absolute ratio between the irradiance and the estimation error.";
     variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, 
-        		                           "photon_irradiance_uncertainty_systematic",
-                                                   harp_type_int8, 2, dimension_type_2d_spec, 
-        					   NULL, description,
-                                                   "mol/(s.m^2.nm)", 
-        					   NULL, read_observation_irradiance_error);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "irradiance_error[]", "observation_data", bands_list, num_bands, description); 
+        harp_ingestion_register_variable_full_read(product_definition,
+                                                   "photon_irradiance_uncertainty_systematic",
+                                                   harp_type_int8, 2, dimension_type_2d_spec,
+                                                   NULL, description,
+                                                   "mol/(s.m^2.nm)", NULL, read_observation_irradiance_error);
+    description = NULL;
+    register_mapping_per_band(variable_definition, "irradiance_error[]", "observation_data", bands_list, num_bands,
+                              description);
 
     /* irradiance_noise */
-    description = "Random irradiance error, encoded as 20 times the natural logarithmic value of the absolute ratio between the irradiance and the random error.";
+    description =
+        "Random irradiance error, encoded as 20 times the natural logarithmic value of the absolute ratio between the irradiance and the random error.";
     variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, 
-        		                           "photon_irradiance_uncertainty_random",
-                                                   harp_type_int8, 2, dimension_type_2d_spec, 
-        					   NULL, description,
-                                                   "mol/(s.m^2.nm.sr)", 
-        					   NULL, read_observation_irradiance_noise);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "irradiance_noise[]", "observation_data", bands_list, num_bands, description); 
+        harp_ingestion_register_variable_full_read(product_definition, "photon_irradiance_uncertainty_random",
+                                                   harp_type_int8, 2, dimension_type_2d_spec, NULL, description,
+                                                   "mol/(s.m^2.nm.sr)", NULL, read_observation_irradiance_noise);
+    description = NULL;
+    register_mapping_per_band(variable_definition, "irradiance_noise[]", "observation_data", bands_list, num_bands,
+                              description);
 
     /* spectral_channel_quality */
     description = "Quality assessment information for each (spectral) channel.";
     variable_definition =
-        harp_ingestion_register_variable_full_read(product_definition, "spectral_channel_quality",
-                                                   harp_type_int8, 2, dimension_type_2d_spec, 
-        					   NULL, description, HARP_UNIT_DIMENSIONLESS, 
-        					   NULL, read_observation_spectral_channel_quality);
-    description = NULL; 
-    register_mapping_per_band(variable_definition, "spectral_channel_quality[]", "observation_data", bands_list, num_bands, description); 
+        harp_ingestion_register_variable_full_read(product_definition, "spectral_channel_quality", harp_type_int8,
+                                                   2, dimension_type_2d_spec, NULL, description,
+                                                   HARP_UNIT_DIMENSIONLESS, NULL,
+                                                   read_observation_spectral_channel_quality);
+    description = NULL;
+    register_mapping_per_band(variable_definition, "spectral_channel_quality[]", "observation_data", bands_list,
+                              num_bands, description);
 
 }
 

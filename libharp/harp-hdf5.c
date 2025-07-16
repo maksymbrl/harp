@@ -339,7 +339,7 @@ static char *get_hdf5_variable_name(const harp_product *product, const harp_vari
     return name;
 }
 
-static int get_link_iteration_index_type(hid_t group_id, H5_index_t * index_type)
+static int get_link_iteration_index_type(hid_t group_id, H5_index_t *index_type)
 {
     hid_t gcpl_id;
     unsigned int crt_order_flags;
@@ -1016,7 +1016,7 @@ static int read_variable(hid_t dataset_id, const char *name, const hdf5_dimensio
 }
 
 /* don't use -1 on error, otherwise the HDF5 library starts printing error messages to the console */
-static herr_t hdf5_find_dimensions_func(hid_t group_id, const char *name, const H5L_info_t * info, void *user_data)
+static herr_t hdf5_find_dimensions_func(hid_t group_id, const char *name, const H5L_info_t *info, void *user_data)
 {
     H5O_info_t object_info;
     hdf5_dimension_ids *dimension_ids;
@@ -1146,7 +1146,7 @@ typedef struct hdf5_read_variable_func_args_struct
 } hdf5_read_variable_func_args;
 
 /* don't use -1 on error, otherwise the HDF5 library starts printing error messages to the console */
-static herr_t hdf5_read_variable_func(hid_t group_id, const char *name, const H5L_info_t * info, void *user_data)
+static herr_t hdf5_read_variable_func(hid_t group_id, const char *name, const H5L_info_t *info, void *user_data)
 {
     hdf5_read_variable_func_args *args;
     H5O_info_t object_info;

@@ -1,11 +1,3 @@
-# { pkgs ? import <nixpkgs> 
-#   {
-#     config = { allowUnfree = true; };
-#   }
-# }:
-
-# { pkgs ? import <nixpkgs> { config = { allowUnfree = true; }; } }:
-
 let
   nixpkgs_24_11 = import (fetchTarball {
     url = "https://github.com/NixOS/nixpkgs/archive/nixos-24.11.tar.gz";
@@ -29,6 +21,8 @@ pkgs.mkShell {
     flex bison
     doxygen swig graphviz 
     zip
+    # source code formatter 
+    indent
 
     # Libraries
     zlib szip hdf4 hdf5
