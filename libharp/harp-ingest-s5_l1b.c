@@ -84,9 +84,9 @@ typedef struct ingest_info_struct
     coda_cursor instrument_cursor;
     coda_cursor observation_cursor;
 
-    coda_cursor observable_cursor;       /* points at radiance|irradiance */
-    coda_cursor observable_error_cursor; /* points at *error dataset */
-    coda_cursor observable_noise_cursor; /* points at *noise dataset */
+    coda_cursor observable_cursor;      /* points at radiance|irradiance */
+    coda_cursor observable_error_cursor;        /* points at *error dataset */
+    coda_cursor observable_noise_cursor;        /* points at *noise dataset */
 
     coda_cursor sensor_mode_cursor;
     coda_cursor geo_data_cursor;
@@ -536,7 +536,7 @@ static int init_cursors(ingest_info *info)
     }
     info->observation_cursor = cursor;
 
-    
+
 
     return 0;
 }
@@ -623,7 +623,7 @@ static int init_dataset(coda_cursor cursor, const char *name, long num_elements,
     {
         harp_set_error(HARP_ERROR_CODA, NULL);
         return -1;
-    } 
+    }
 
     coda_cursor_goto_parent(&cursor);
     coda_cursor_goto_parent(&cursor);
@@ -885,11 +885,12 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
         return -1;
     }
 
-    /* to decode the uncertainties for radiance|irradiance */ 
-    if (info->product_type == s5_type_irr) 
+    /* to decode the uncertainties for radiance|irradiance */
+    if (info->product_type == s5_type_irr)
     {
-        if (init_dataset(info->observation_cursor, "irradiance", info->num_scanlines * info->num_pixels * info->num_spectral,
-                         &info->observable_cursor, &info->observable_fill_value) != 0)
+        if (init_dataset
+            (info->observation_cursor, "irradiance", info->num_scanlines * info->num_pixels * info->num_spectral,
+             &info->observable_cursor, &info->observable_fill_value) != 0)
         {
             ingestion_done(info);
             return -1;
@@ -909,10 +910,11 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
             return -1;
         }
     }
-    else 
+    else
     {
-        if (init_dataset(info->observation_cursor, "radiance", info->num_scanlines * info->num_pixels * info->num_spectral,
-                         &info->observable_cursor, &info->observable_fill_value) != 0)
+        if (init_dataset
+            (info->observation_cursor, "radiance", info->num_scanlines * info->num_pixels * info->num_spectral,
+             &info->observable_cursor, &info->observable_fill_value) != 0)
         {
             ingestion_done(info);
             return -1;
@@ -1358,7 +1360,8 @@ static int read_observation_radiance(void *user_data, harp_array data)
     return 0;
 }
 
-static int decode_uncertainty(ingest_info *info, const char *error_var_name, const char *obs_var_name, harp_array sigma_out)            
+static int decode_uncertainty(ingest_info *info, const char *error_var_name, const char *obs_var_name,
+                              harp_array sigma_out)
 {
     long n = (long)info->num_scanlines * info->num_pixels * info->num_spectral;
 
@@ -1367,21 +1370,21 @@ static int decode_uncertainty(ingest_info *info, const char *error_var_name, con
     static float *obs = NULL;
     static long buf_size = 0;
 
-    harp_array enc_arr;  
-    harp_array obs_arr;  
+    harp_array enc_arr;
+    harp_array obs_arr;
 
     int8_t fill_E;
-    float  fill_R;
+    float fill_R;
 
     if (buf_size < n)
     {
         enc = realloc(enc, n * sizeof(int8_t)); /* encoded bytes */
         obs = realloc(obs, n * sizeof(float));  /* radiance|irradiance */
         if (enc == NULL || obs == NULL)
-	{
-	    harp_set_error(HARP_ERROR_OUT_OF_MEMORY, "unable to allocate decode buffers");
-            return -1; 
-	}
+        {
+            harp_set_error(HARP_ERROR_OUT_OF_MEMORY, "unable to allocate decode buffers");
+            return -1;
+        }
         buf_size = n;
     }
 
@@ -1389,13 +1392,13 @@ static int decode_uncertainty(ingest_info *info, const char *error_var_name, con
     enc_arr.int8_data = enc;
     obs_arr.float_data = obs;
 
-    /* reading the uncertainty */ 
+    /* reading the uncertainty */
     if (read_dataset(info->observation_cursor, error_var_name, harp_type_int8, n, enc_arr) != 0)
     {
         return -1;
     }
 
-    /* reading the radiance|irradiance */ 
+    /* reading the radiance|irradiance */
     if (read_dataset(info->observation_cursor, obs_var_name, harp_type_float, n, obs_arr) != 0)
     {
         return -1;
@@ -1418,12 +1421,12 @@ static int decode_uncertainty(ingest_info *info, const char *error_var_name, con
     /* decode slice */
     for (long i = 0; i < n; i++)
     {
-        int8_t  E = enc[i];
-        float   R = obs[i];
+        int8_t E = enc[i];
+        float R = obs[i];
 
-	if (E == fill_E || R == fill_R)
+        if (E == fill_E || R == fill_R)
         {
-            sigma_out.float_data[i] = fill_E;           /* keep fill value */
+            sigma_out.float_data[i] = fill_E;   /* keep fill value */
         }
         else
         {
