@@ -591,7 +591,7 @@ static int init_dimensions(ingest_info *info)
     return 0;
 }
 
-// From S5P L1b module
+/* From S5P L1b module */
 static int init_dataset(coda_cursor cursor, const char *name, long num_elements, coda_cursor *new_cursor,
                         harp_scalar *fill_value)
 {
@@ -624,11 +624,6 @@ static int init_dataset(coda_cursor cursor, const char *name, long num_elements,
         harp_set_error(HARP_ERROR_CODA, NULL);
         return -1;
     } 
-    //else if (coda_cursor_read_int8(&cursor, &fill_value->int8_data) != 0)
-    //{
-    //    harp_set_error(HARP_ERROR_CODA, NULL);
-    //    return -1;
-    //} 
 
     coda_cursor_goto_parent(&cursor);
     coda_cursor_goto_parent(&cursor);
@@ -638,116 +633,6 @@ static int init_dataset(coda_cursor cursor, const char *name, long num_elements,
 
     return 0;
 }
-
-
-//static int init_dataset(coda_cursor cursor, const char *name, long num_elements, coda_cursor *new_cursor, 
-//		harp_scalar *fill_value)
-//{
-//    long coda_num_elements;
-//    coda_native_type native_type;
-//
-//    /* locate the dataset */
-//    if (coda_cursor_goto_record_field_by_name(&cursor, name) != 0)
-//    {
-//        harp_set_error(HARP_ERROR_CODA, NULL);
-//        return -1;
-//    }
-//    if (coda_cursor_get_num_elements(&cursor, &coda_num_elements) != 0)
-//    {
-//        harp_set_error(HARP_ERROR_CODA, NULL);
-//        return -1;
-//    }
-//    if (coda_num_elements != num_elements)
-//    {
-//        harp_set_error(HARP_ERROR_INGESTION, "dataset has %ld elements; expected %ld", coda_num_elements, 
-//			num_elements);
-//        harp_add_coda_cursor_path_to_error_message(&cursor);
-//        return -1;
-//    }
-//
-//    /* determine native storage type */
-//    if (coda_cursor_get_read_type(&cursor, &native_type) != 0)
-//    {
-//        harp_set_error(HARP_ERROR_CODA, NULL);
-//        return -1;
-//    }
-//
-//    /* read _FillValue[0] in the correct type */
-//    if (coda_cursor_goto(&cursor, "@FillValue[0]") != 0)
-//    {
-//        harp_set_error(HARP_ERROR_CODA, NULL);
-//        return -1;
-//    }
-//
-//    switch (native_type)
-//    {
-//        case coda_native_type_int8:
-//        {
-//            if (coda_cursor_read_int8(&cursor, &fill_value->int8_data) != 0)
-//            {
-//                harp_set_error(HARP_ERROR_CODA, NULL);
-//                return -1;
-//            }
-//            break;
-//        }
-//
-//        case coda_native_type_int16:
-//        {
-//            if (coda_cursor_read_int16(&cursor, &fill_value->int16_data) != 0)
-//            {
-//                harp_set_error(HARP_ERROR_CODA, NULL);
-//                return -1;
-//            }
-//            break;
-//        }
-//
-//        case coda_native_type_int32:
-//        {
-//            if (coda_cursor_read_int32(&cursor, &fill_value->int32_data) != 0)
-//            {
-//                harp_set_error(HARP_ERROR_CODA, NULL);
-//                return -1;
-//            }
-//            break;
-//        }
-//
-//        case coda_native_type_float:
-//        {
-//            if (coda_cursor_read_float(&cursor, &fill_value->float_data) != 0)
-//            {
-//                harp_set_error(HARP_ERROR_CODA, NULL);
-//                return -1;
-//            }
-//            break;
-//        }
-//
-//        case coda_native_type_double:
-//        {
-//            if (coda_cursor_read_double(&cursor, &fill_value->double_data) != 0)
-//            {
-//                harp_set_error(HARP_ERROR_CODA, NULL);
-//                return -1;
-//            }
-//            break;
-//        }
-//
-//        default:
-//        {
-//            harp_set_error(HARP_ERROR_INGESTION, "unsupported native type for _FillValue");
-//            return -1;
-//        }
-//    }
-//
-//    /* restore cursor so caller can reuse it */
-//    coda_cursor_goto_parent(&cursor);  /* attribute    */
-//    coda_cursor_goto_parent(&cursor);  /* dataset root */
-//    coda_cursor_goto_parent(&cursor);  /* record       */
-//
-//    *new_cursor = cursor;
-//    return 0;
-//}
-
-
 
 
 /* Extract Sentinel-5 L1b product collection and processor version
@@ -1473,18 +1358,6 @@ static int read_observation_radiance(void *user_data, harp_array data)
     return 0;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 static int decode_uncertainty(ingest_info *info, const char *error_var_name, const char *obs_var_name, harp_array sigma_out)            
 {
     long n = (long)info->num_scanlines * info->num_pixels * info->num_spectral;
@@ -1497,8 +1370,6 @@ static int decode_uncertainty(ingest_info *info, const char *error_var_name, con
     harp_array enc_arr;  
     harp_array obs_arr;  
 
-    //const int8_t fill_E;
-    //const float  fill_R;
     int8_t fill_E;
     float  fill_R;
 
@@ -1533,9 +1404,6 @@ static int decode_uncertainty(ingest_info *info, const char *error_var_name, con
     broadcast_array_int8(info->num_scanlines, info->num_pixels, enc);
     broadcast_array_float(info->num_scanlines, info->num_pixels, obs);
 
-    //printf("%s\n", error_var_name);
-
-
     if (strcmp(error_var_name, "radiance_error") == 0 || strcmp(error_var_name, "irradiance_error") == 0)
     {
         fill_E = info->observable_error_fill_value.int8_data;
@@ -1565,95 +1433,6 @@ static int decode_uncertainty(ingest_info *info, const char *error_var_name, con
     return 0;
 }
 
-//static int read_observable_error(void *user_data, long index, harp_array data)
-//{
-//    ingest_info *info = (ingest_info *)user_data;
-//    harp_array obs;
-//    long i;
-//
-//    if (info->observable_buffer == NULL)
-//    {
-//        if (init_observable_buffer(info) != 0)
-//        {
-//            return -1;
-//        }
-//    }
-//    obs.ptr = info->observable_buffer;
-//
-//    if (read_partial_dataset(&info->observable_error_cursor, index * info->num_channels, info->num_channels, data,
-//                             info->observable_error_fill_value) != 0)
-//    {
-//        return -1;
-//    }
-//    if (read_partial_dataset(&info->observable_cursor, index * info->num_channels, info->num_channels, obs,
-//                             info->observable_fill_value) != 0)
-//    {
-//        return -1;
-//    }
-//    for (i = 0; i < info->num_channels; i++)
-//    {
-//        data.float_data[i] = fabs(pow(10, data.float_data[i] * 0.1) * obs.float_data[i]);
-//    }
-//
-//    return 0;
-//}
-//
-//static int read_observable_uncertainty(void *user_data, long index, harp_array data)
-//{
-//    ingest_info *info = (ingest_info *)user_data;
-//    harp_array    obs;                         /* wrapper for obs buffer */
-//    long          i;
-//
-//    /* allocate scratch buffer for one spectral slice (once) */
-//    if (info->observable_buffer == NULL)
-//    {
-//        if (init_observable_buffer(info) != 0)  /* allocates num_spectral floats */
-//            return -1;
-//    }
-//    obs.ptr = info->observable_buffer;
-//
-//    const long offset  = index * info->num_spectral;   /* slice start */
-//    const long nchan   = info->num_spectral;           /* slice length */
-//
-//    /* --- 1. read encoded uncertainty (Int8 → Float32 array 'data') */
-//    if (read_partial_dataset(&info->observable_error_cursor,
-//                             offset, nchan,
-//                             data,                       /* write here */
-//                             info->observable_error_fill_value) != 0)
-//        return -1;
-//
-//    /* --- 2. read observable (radiance / irradiance) into 'obs' */
-//    if (read_partial_dataset(&info->observable_cursor,
-//                             offset, nchan,
-//                             obs,                        /* write here */
-//                             info->observable_fill_value) != 0)
-//        return -1;
-//
-//    /* --- 3. decode σ = |R| / exp(E/20) --------------------------- */
-//    for (i = 0; i < nchan; i++)
-//    {
-//        /* data.float_data already holds the Int8 E as float          */
-//        /* obs.float_data  holds the corresponding observable R       */
-//        data.float_data[i] = fabsf(obs.float_data[i] /
-//                                   expf(data.float_data[i] / 20.0f));
-//        /* fill values remain untouched because the exponent formula
-//           acts only on valid data points (same behaviour as S5P code) */
-//    }
-//
-//    return 0;
-//}
-
-
-
-
-
-
-
-
-
-
-
-
 static int read_observation_radiance_error(void *user_data, harp_array data)
 {
     return decode_uncertainty((ingest_info *)user_data, "radiance_error", "radiance", data);
@@ -1664,35 +1443,6 @@ static int read_observation_radiance_noise(void *user_data, harp_array data)
     return decode_uncertainty((ingest_info *)user_data, "radiance_noise", "radiance", data);
 }
 
-//static int read_observation_radiance_error(void *user_data, harp_array data)
-//{
-//    ingest_info *info = (ingest_info *)user_data;
-//
-//    if (read_dataset(info->observation_cursor, "radiance_error", harp_type_int8,
-//                     info->num_scanlines * info->num_pixels * info->num_spectral, data) != 0)
-//    {
-//        return -1;
-//    }
-//
-//    broadcast_array_int8(info->num_scanlines, info->num_pixels, data.int8_data);
-//
-//    return 0;
-//}
-//
-//static int read_observation_radiance_noise(void *user_data, harp_array data)
-//{
-//    ingest_info *info = (ingest_info *)user_data;
-//
-//    if (read_dataset(info->observation_cursor, "radiance_noise", harp_type_int8,
-//                     info->num_scanlines * info->num_pixels * info->num_spectral, data) != 0)
-//    {
-//        return -1;
-//    }
-//
-//    broadcast_array_int8(info->num_scanlines, info->num_pixels, data.int8_data);
-//
-//    return 0;
-//}
 
 static int read_observation_spectral_channel_quality(void *user_data, harp_array data)
 {
@@ -1731,37 +1481,6 @@ static int read_observation_irradiance_noise(void *user_data, harp_array data)
 {
     return decode_uncertainty((ingest_info *)user_data, "irradiance_noise", "irradiance", data);
 }
-
-//static int read_observation_irradiance_error(void *user_data, harp_array data)
-//{
-//    ingest_info *info = (ingest_info *)user_data;
-//
-//    if (read_dataset(info->observation_cursor, "irradiance_error", harp_type_int8,
-//                     info->num_scanlines * info->num_pixels * info->num_spectral, data) != 0)
-//    {
-//        return -1;
-//    }
-//
-//    broadcast_array_int8(info->num_scanlines, info->num_pixels, data.int8_data);
-//
-//    return 0;
-//}
-//
-//static int read_observation_irradiance_noise(void *user_data, harp_array data)
-//{
-//    ingest_info *info = (ingest_info *)user_data;
-//
-//    if (read_dataset(info->observation_cursor, "irradiance_noise", harp_type_int8,
-//                     info->num_scanlines * info->num_pixels * info->num_spectral, data) != 0)
-//    {
-//        return -1;
-//    }
-//
-//    broadcast_array_int8(info->num_scanlines, info->num_pixels, data.int8_data);
-//
-//    return 0;
-//}
-
 
 /* Instrument variables */
 
@@ -2136,8 +1855,6 @@ static void register_observation_variables(harp_product_definition
                               description);
 
     /* photon_radiance_uncertainty_systematic */
-    //description = "Radiance error, encoded as 20 times the natural logarithmic "
-    //    "value of the absolute ratio between the radiance and the estimation " "error.";
     description = "spectral radiance systematic uncertainty";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "photon_radiance_uncertainty_systematic",
@@ -2149,8 +1866,6 @@ static void register_observation_variables(harp_product_definition
                               description);
 
     /* photon_radiance_uncertainty_random */
-    //description = "Random radiance error, encoded as 20 times the natural logarithmic "
-    //    "value of the absolute ratio between the radiance and the random error.";
     description = "spectral radiance random uncertainty";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "photon_radiance_uncertainty_random",
@@ -2494,8 +2209,6 @@ static void register_irr_product(void)
 
 
     /* photon_irradiance_uncertainty_systematic */
-    //description = "Irradiance error, encoded as 20 times the natural logarithmic "
-    //    "value of the absolute ratio between the irradiance and the estimation error.";
     description = "spectral irradiance systematic uncertainty";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "photon_irradiance_uncertainty_systematic",
@@ -2507,8 +2220,6 @@ static void register_irr_product(void)
                               description);
 
     /* photon_irradiance_uncertainty_random */
-    //description = "Random irradiance error, encoded as 20 times the natural logarithmic value of the absolute ratio "
-    //    "between the irradiance and the random error.";
     description = "spectral irradiance random uncertainty";
     variable_definition =
         harp_ingestion_register_variable_full_read(product_definition, "photon_irradiance_uncertainty_random",
