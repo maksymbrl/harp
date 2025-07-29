@@ -13,108 +13,147 @@
 /* Maximum length of a path string in generated mapping descriptions. */
 #define MAX_PATH_LENGTH 256
 
-typedef enum iasi_ng_product_type_enum {
-  iasi_ng_type_co,
-  iasi_ng_type_twv,
+typedef enum iasi_ng_product_type_enum 
+{
+    iasi_ng_type_co,
+    iasi_ng_type_sfc,
+    iasi_ng_type_cld,
+    iasi_ng_type_ghg,
+    iasi_ng_type_twv,
 } iasi_ng_product_type;
 
 #define IASI_NG_NUM_PRODUCT_TYPES (((int)iasi_ng_type_twv) + 1)
 
-typedef enum iasi_ng_dimension_type_enum {
-  iasi_ng_dim_lines,
-  iasi_ng_dim_for,
-  iasi_ng_dim_fov,
-  iasi_ng_dim_level,
+typedef enum iasi_ng_dimension_type_enum 
+{
+    iasi_ng_dim_lines,
+    iasi_ng_dim_for,
+    iasi_ng_dim_fov,
+    iasi_ng_dim_level,
 } iasi_ng_dimension_type;
 
 /* handy constant: last enum value + 1 */
 #define IASI_NG_NUM_DIM_TYPES ((int)iasi_ng_dim_level + 1)
 
-static const char *
-    iasi_ng_dimension_name[IASI_NG_NUM_PRODUCT_TYPES][IASI_NG_NUM_DIM_TYPES] = {
-        {"n_lines", "n_for", "n_fov", NULL},       /* CO */
-        {"n_lines", "n_for", "n_fov", "n_levels"}, /* TWV */
+static const char *iasi_ng_dimension_name[IASI_NG_NUM_PRODUCT_TYPES][IASI_NG_NUM_DIM_TYPES] = 
+{
+    {"n_lines", "n_for", "n_fov", NULL},       /* CO */
+    {"n_lines", "n_for", "n_fov", NULL},       /* SFC */
+    {"n_lines", "n_for", "n_fov", "n_levels"}, /* CLD */
+    {"n_lines", "n_for", "n_fov", "n_levels"}, /* GHG */
+    {"n_lines", "n_for", "n_fov", "n_levels"}, /* TWV */
 };
 
-typedef struct ingest_info_struct {
-  coda_product *product;
-
-  iasi_ng_product_type product_type;
-
-  /* dimensions */
-  long num_lines;
-  long num_for;
-  long num_fov;
-  long num_levels;
-
-  /* cursors */
-  coda_cursor product_cursor;
-  coda_cursor geolocation_cursor;
-  coda_cursor detailed_results_cursor;
-  coda_cursor input_data_cursor;
+typedef struct ingest_info_struct 
+{
+    coda_product *product;
+  
+    iasi_ng_product_type product_type;
+  
+    /* dimensions */
+    long num_lines;
+    long num_for;
+    long num_fov;
+    long num_levels;
+  
+    /* cursors */
+    coda_cursor data_cursor; 
+    coda_cursor geolocation_cursor;
+    coda_cursor surface_cursor;
+    coda_cursor stat_retrieval_cursor;
+  
+    /* from S5 module */ 
+    int processor_version;
+    int collection_number;
+    uint8_t *surface_layer_status; 
 
 } ingest_info;
 
 /* The routines start here
  */
 
-static const char *get_product_type_name(iasi_ng_product_type product_type) {
-  switch (product_type) {
-  case iasi_ng_type_co:
-    return "IAS_02_CO";
-  case iasi_ng_type_twv:
-    return "IAS_02_TWV";
-  }
-
-  assert(0);
-  exit(1);
+static const char *get_product_type_name(iasi_ng_product_type product_type) 
+{
+    switch (product_type) 
+    {
+        case iasi_ng_type_co:
+            return "IAS_02_CO_";
+        case iasi_ng_type_sfc:
+            return "IAS_02_SFC";
+        case iasi_ng_type_cld:
+            return "IAS_02_CLD";
+        case iasi_ng_type_ghg:
+            return "IAS_02_GHG";
+        case iasi_ng_type_twv:
+            return "IAS_02_TWV";
+    }
+  
+    assert(0);
+    exit(1);
 }
 
 /* Tiny helper for get_product_type() */
 static void dash_to_underscore(char *s) 
 {
-  /* use size_t for byte offsets into the char array */
-  size_t i;
-
-  /* Changing '-' to '_' */
-  for (i = 0; s[i] != '\0'; ++i) {
-    if (s[i] == '-') {
-      s[i] = '_';
+    /* use size_t for byte offsets into the char array */
+    size_t i;
+  
+    /* Changing '-' to '_' */
+    for (i = 0; s[i] != '\0'; ++i) 
+    {
+        if (s[i] == '-') 
+	{
+            s[i] = '_';
+        }
     }
-  }
 }
 
 static void broadcast_array_float(long num_scanlines, long num_pixels, float *data)
 {
-  long i;
-
-  /* Repeat the value for each scanline for all pixels in that scanline. Iterate
-   * in reverse to avoid overwriting scanline values.
-   */
-  for (i = num_scanlines - 1; i >= 0; i--) {
-    long j;
-
-    for (j = 0; j < num_pixels; j++) {
-      data[i * num_pixels + j] = data[i];
+    long i;
+  
+    /* Repeat the value for each scanline for all pixels in that scanline. Iterate
+     * in reverse to avoid overwriting scanline values.
+     */
+    for (i = num_scanlines - 1; i >= 0; i--) 
+    {
+        long j;
+  
+        for (j = 0; j < num_pixels; j++) 
+	{
+            data[i * num_pixels + j] = data[i];
+        }
     }
-  }
 }
 
-static void broadcast_array_double(long num_scanlines, long num_pixels, double *data) 
+static void broadcast_array_double(long num_lines, long num_for, long num_fov, double *data)
 {
-  long i;
+    long i;
 
-  /* Repeat the value for each scanline for all pixels in that scanline. Iterate
-   * in reverse to avoid overwriting scanline values.
-   */
-  for (i = num_scanlines - 1; i >= 0; i--) {
-    long j;
+    /* last source element */
+    long in_idx  = num_lines * num_for - 1;           
+    /* last destination element      */
+    long out_idx = num_lines * num_for * num_fov - 1; 
 
-    for (j = 0; j < num_pixels; j++) {
-      data[i * num_pixels + j] = data[i];
+    for (i = num_lines - 1; i >= 0; i--)
+    {
+	long j; 
+
+        for (j = num_for - 1; j >= 0; j--)
+        {
+	    long k;
+	    /* source value */
+            double v = data[in_idx--];               
+
+            for (k = 0; k < num_fov; k++)            
+            {
+		/* replicate across FOV */
+                data[out_idx--] = v;
+            }
+        }
     }
-  }
 }
+
 
 static int get_product_type(coda_product *product, iasi_ng_product_type *product_type)
 {
@@ -272,11 +311,1005 @@ static int find_dimension_length_recursive(coda_cursor *cursor, const char *name
     return -1;
 }
 
+// TODO: This probably will not work since data may not have any dimensions 
+/* Find dimension length by recursively searching under data/. */
+static int get_dimension_length(ingest_info *info, const char *name, long *length)
+{
+    coda_cursor cursor = info->data_cursor;
+
+    if (find_dimension_length_recursive(&cursor, name, length) != 0)
+    {
+        harp_set_error(HARP_ERROR_INGESTION, "Dimension '%s' not found in product structure", name);
+        return -1;
+    }
+
+    return 0;
+}
+
+
+/* Init Routines */
+
+/* Initialize CODA cursors for main record groups with inline comments. */
+static int init_cursors(ingest_info *info)
+{
+    coda_cursor cursor;
+
+    /* Bind a cursor to the root of the CODA product */
+    if (coda_cursor_set_product(&cursor, info->product) != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+
+    if (coda_cursor_goto_record_field_by_name(&cursor, "data") != 0) 
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+    /* Save data/ cursor; subsequent navigation is relative to this. */
+    info->data_cursor = cursor;
+
+    /* Geolocation group */
+    if (coda_cursor_goto_record_field_by_name(&cursor, "geolocation_information") != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+    info->geolocation_cursor = cursor;
+
+    /* Back to data/ */
+    coda_cursor_goto_parent(&cursor);
+
+    /* Instrument data: '/data/surface_info'. Only TWV, SFC, CLD, and GHG have it. */
+    if (info->product_type == iasi_ng_type_twv || info->product_type == iasi_ng_type_sfc || info->product_type == iasi_ng_type_cld || info->product_type == iasi_ng_type_ghg)
+    {
+        if (coda_cursor_goto_record_field_by_name(&cursor, "surface_info") != 0)
+        {
+            harp_set_error(HARP_ERROR_CODA, NULL);
+            return -1;
+        }
+        info->surface_cursor = cursor;
+
+        /* Back to data/ */
+        coda_cursor_goto_parent(&cursor);
+    }
+
+    /* Statistical retrieval data: '/data/statistical_retrieval'. Only SFC and TWV have it. */
+    if (info->product_type == iasi_ng_type_twv || info->product_type == iasi_ng_type_sfc)
+    {
+        if (coda_cursor_goto_record_field_by_name(&cursor, "statistical_retrieval") != 0)
+        {
+            harp_set_error(HARP_ERROR_CODA, NULL);
+            return -1;
+        }
+        info->stat_retrieval_cursor = cursor;
+    }
+
+
+
+    return 0;
+}
+
+/* Initialize record dimension lengths for the Sentinel-5 simulated L1b dataset */
+static int init_dimensions(ingest_info *info)
+{
+    /* Get number of lines */
+    if (iasi_ng_dimension_name[info->product_type][iasi_ng_dim_lines] != NULL)
+    {
+        if (get_dimension_length(info, iasi_ng_dimension_name[info->product_type][iasi_ng_dim_lines],
+                                 &info->num_lines) != 0)
+        {
+            return -1;
+        }
+    }
+
+    /* Get number of field of regard */
+    if (iasi_ng_dimension_name[info->product_type][iasi_ng_dim_for] != NULL)
+    {
+        if (get_dimension_length(info, iasi_ng_dimension_name[info->product_type][iasi_ng_dim_for], &info->num_for) != 0)
+        {
+            return -1;
+        }
+    }
+
+    /* Get number of field of views */
+    if (iasi_ng_dimension_name[info->product_type][iasi_ng_dim_fov] != NULL)
+    {
+        if (get_dimension_length(info, iasi_ng_dimension_name[info->product_type][iasi_ng_dim_fov], &info->num_fov) != 0)
+        {
+            return -1;
+        }
+    }
+
+    /* Get number of levels */
+    if (iasi_ng_dimension_name[info->product_type][iasi_ng_dim_level] != NULL)
+    {
+        if (get_dimension_length(info, iasi_ng_dimension_name[info->product_type][iasi_ng_dim_level], &info->num_levels) !=
+            0)
+        {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/* From S5P L1b module */
+static int init_dataset(coda_cursor cursor, const char *name, long num_elements, coda_cursor *new_cursor,
+                        harp_scalar *fill_value)
+{
+    long coda_num_elements;
+
+    if (coda_cursor_goto_record_field_by_name(&cursor, name) != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+    if (coda_cursor_get_num_elements(&cursor, &coda_num_elements) != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+    if (coda_num_elements != num_elements)
+    {
+        harp_set_error(HARP_ERROR_INGESTION, "dataset has %ld elements; expected %ld", coda_num_elements, num_elements);
+        harp_add_coda_cursor_path_to_error_message(&cursor);
+        return -1;
+    }
+    if (coda_cursor_goto(&cursor, "@FillValue[0]") != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+
+    if (coda_cursor_read_float(&cursor, &fill_value->float_data) != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+
+    coda_cursor_goto_parent(&cursor);
+    coda_cursor_goto_parent(&cursor);
+    coda_cursor_goto_parent(&cursor);
+
+    *new_cursor = cursor;
+
+    return 0;
+}
+
+
+/* Extract Sentinel-5 L1b product collection and processor version
+ * from the global "logical product name".
+ */
+static int init_versions(ingest_info *info)
+{
+    coda_cursor cursor;
+    char product_name[84];
+
+    if (coda_cursor_set_product(&cursor, info->product) != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+    if (coda_cursor_goto(&cursor, "/@id") != 0)
+    {
+        /* no global 'id' attribute */
+        return 0;
+    }
+    if (coda_cursor_read_string(&cursor, product_name, 84) != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+    if (strlen(product_name) != 83)
+    {
+        /* 'id' attribute does not contain a valid logical product name */
+        return 0;
+    }
+
+    /* Populating the variables */
+    info->collection_number = (int)strtol(&product_name[58], NULL, 10);
+    info->processor_version = (int)strtol(&product_name[61], NULL, 10);
+
+    return 0;
+}
+
+static void ingestion_done(void *user_data)
+{
+    ingest_info *info = (ingest_info *)user_data;
+
+    if (info->surface_layer_status != NULL)
+    {
+        free(info->surface_layer_status);
+    }
+
+    free(info);
+}
+
+
+static int ingestion_init(const harp_ingestion_module *module, coda_product *product,
+                          const harp_ingestion_options *options, harp_product_definition **definition, void **user_data)
+{
+    const char *option_value;
+    ingest_info *info;
+
+    info = (ingest_info *)malloc(sizeof(ingest_info));
+    if (info == NULL)
+    {
+        harp_set_error(HARP_ERROR_OUT_OF_MEMORY, "out of memory (could not allocate %lu bytes) (%s:%u)",
+                       sizeof(ingest_info), __FILE__, __LINE__);
+        return -1;
+    }
+
+    info->product = product;
+    info->surface_layer_status = NULL;
+
+    /* Dimensions */
+    info->num_lines = 0;
+    info->num_fov = 0;
+    info->num_for = 0;
+    info->num_levels = 0;
+
+
+    if (get_product_type(info->product, &info->product_type) != 0)
+    {
+        ingestion_done(info);
+        return -1;
+    }
+
+    if (init_versions(info) != 0)
+    {
+        ingestion_done(info);
+        return -1;
+    }
+
+    *definition = *module->product_definition;
+
+
+    if (init_cursors(info) != 0)
+    {
+        ingestion_done(info);
+        return -1;
+    }
+
+
+    /* Getting input product dimensios */
+    if (init_dimensions(info) != 0)
+    {
+        ingestion_done(info);
+        return -1;
+    }
+
+    printf("[ingestion_init]: num_lines  = %ld\n", (long)info->num_lines);
+    printf("[ingestion_init]: num_for    = %ld\n", (long)info->num_for);
+    printf("[ingestion_init]: num_fov    = %ld\n", (long)info->num_fov);
+    printf("[ingestion_init]: num_levels = %ld\n", (long)info->num_levels);
+
+    *user_data = info;
+
+    return 0;
+}
+
+
+/* Reading Routines */
+
+static int read_dimensions(void *user_data, long dimension[HARP_NUM_DIM_TYPES])
+{
+    ingest_info *info = (ingest_info *)user_data;
+
+    dimension[harp_dimension_time] = info->num_lines * info->num_for * info->num_fov;
+    //dimension[harp_dimension_spectral] = info->num_spectral;
+
+    return 0;
+}
+
+static int read_dataset(coda_cursor cursor, const char *dataset_name, harp_data_type data_type, long num_elements,
+                        harp_array data)
+{
+    long coda_num_elements;
+    harp_scalar fill_value;
+
+    if (coda_cursor_goto_record_field_by_name(&cursor, dataset_name) != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+    if (coda_cursor_get_num_elements(&cursor, &coda_num_elements) != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+    if (coda_num_elements != num_elements)
+    {
+        harp_set_error(HARP_ERROR_INGESTION, "dataset has %ld elements; expected %ld", coda_num_elements, num_elements);
+        harp_add_coda_cursor_path_to_error_message(&cursor);
+        return -1;
+    }
+
+    switch (data_type)
+    {
+        case harp_type_int8:
+            {
+                coda_native_type read_type;
+
+                if (coda_cursor_goto_first_array_element(&cursor) != 0)
+                {
+                    harp_set_error(HARP_ERROR_CODA, NULL);
+                    return -1;
+                }
+                if (coda_cursor_get_read_type(&cursor, &read_type) != 0)
+                {
+                    harp_set_error(HARP_ERROR_CODA, NULL);
+                    return -1;
+                }
+                coda_cursor_goto_parent(&cursor);
+                if (read_type == coda_native_type_uint8)
+                {
+                    if (coda_cursor_read_uint8_array(&cursor, (uint8_t *)data.int8_data, coda_array_ordering_c) != 0)
+                    {
+                        harp_set_error(HARP_ERROR_CODA, NULL);
+                        return -1;
+                    }
+                }
+                else
+                {
+                    if (coda_cursor_read_int8_array(&cursor, data.int8_data, coda_array_ordering_c) != 0)
+                    {
+                        harp_set_error(HARP_ERROR_CODA, NULL);
+                        return -1;
+                    }
+                }
+            }
+            break;
+        case harp_type_int16:
+            {
+                coda_native_type read_type;
+
+                if (coda_cursor_goto_first_array_element(&cursor) != 0)
+                {
+                    harp_set_error(HARP_ERROR_CODA, NULL);
+                    return -1;
+                }
+                if (coda_cursor_get_read_type(&cursor, &read_type) != 0)
+                {
+                    harp_set_error(HARP_ERROR_CODA, NULL);
+                    return -1;
+                }
+                coda_cursor_goto_parent(&cursor);
+                if (read_type == coda_native_type_uint16)
+                {
+                    if (coda_cursor_read_uint16_array(&cursor, (uint16_t *)data.int16_data, coda_array_ordering_c) != 0)
+                    {
+                        harp_set_error(HARP_ERROR_CODA, NULL);
+                        return -1;
+                    }
+                }
+                else
+                {
+                    if (coda_cursor_read_int16_array(&cursor, data.int16_data, coda_array_ordering_c) != 0)
+                    {
+                        harp_set_error(HARP_ERROR_CODA, NULL);
+                        return -1;
+                    }
+                }
+            }
+            break;
+        case harp_type_int32:
+            {
+                coda_native_type read_type;
+
+                if (coda_cursor_goto_first_array_element(&cursor) != 0)
+                {
+                    harp_set_error(HARP_ERROR_CODA, NULL);
+                    return -1;
+                }
+                if (coda_cursor_get_read_type(&cursor, &read_type) != 0)
+                {
+                    harp_set_error(HARP_ERROR_CODA, NULL);
+                    return -1;
+                }
+                coda_cursor_goto_parent(&cursor);
+                if (read_type == coda_native_type_uint32)
+                {
+                    if (coda_cursor_read_uint32_array(&cursor, (uint32_t *)data.int32_data, coda_array_ordering_c) != 0)
+                    {
+                        harp_set_error(HARP_ERROR_CODA, NULL);
+                        return -1;
+                    }
+                }
+                else
+                {
+                    if (coda_cursor_read_int32_array(&cursor, data.int32_data, coda_array_ordering_c) != 0)
+                    {
+                        harp_set_error(HARP_ERROR_CODA, NULL);
+                        return -1;
+                    }
+                }
+            }
+            break;
+        case harp_type_float:
+            if (coda_cursor_read_float_array(&cursor, data.float_data, coda_array_ordering_c) != 0)
+            {
+                harp_set_error(HARP_ERROR_CODA, NULL);
+                return -1;
+            }
+            break;  
+
+        case harp_type_double:
+            if (coda_cursor_read_double_array(&cursor, data.double_data, coda_array_ordering_c) != 0)
+            {
+                harp_set_error(HARP_ERROR_CODA, NULL);
+                return -1;
+            }
+            break;
+        default:
+            assert(0);
+            exit(1);
+    }
+
+    return 0;
+}
+
+
+
+/* From IASI L2 module */ 
+//static int get_corner_coordinates(ingest_info *info, long scan_id)
+//{
+//    double latlong[4 * 2];
+//    double center_latitude;
+//    double center_longitude;
+//    double outer_latitude[4];
+//    double outer_longitude[4];
+//    coda_cursor cursor;
+//    int i;
+//
+//    cursor = info->mdr_cursor[scan_id / 30];
+//    if (coda_cursor_goto_record_field_by_name(&cursor, "EARTH_LOCATION") != 0)
+//    {
+//        harp_set_error(HARP_ERROR_CODA, NULL);
+//        return -1;
+//    }
+//    /* read 4 lat/long pairs (using flat index) from [120,2] array */
+//    if (coda_cursor_goto_array_element_by_index(&cursor, (scan_id % 30) * 4 * 2) != 0)
+//    {
+//        harp_set_error(HARP_ERROR_CODA, NULL);
+//        return -1;
+//    }
+//    for (i = 0; i < 8; i++)
+//    {
+//        if (coda_cursor_read_double(&cursor, &latlong[i]) != 0)
+//        {
+//            harp_set_error(HARP_ERROR_CODA, NULL);
+//            return -1;
+//        }
+//        if (i < 8 - 1)
+//        {
+//            if (coda_cursor_goto_next_array_element(&cursor) != 0)
+//            {
+//                harp_set_error(HARP_ERROR_CODA, NULL);
+//                return -1;
+//            }
+//        }
+//    }
+//
+//    /* The 2x2 elements in a scan are stored in the product in the order:
+//     *  - bottom right
+//     *  - top right
+//     *  - top left
+//     *  - bottom left
+//     * The scans within a scan line go from left to right with increasing time.
+//     * The bottom is defined as 'first in flight direction' and the top as 'last in flight direction'.
+//     */
+//
+//    /* calculate the center point of the scan */
+//    harp_geographic_intersection(latlong[6], latlong[7], latlong[2], latlong[3], latlong[0], latlong[1], latlong[4],
+//                                 latlong[5], &center_latitude, &center_longitude);
+//
+//    /* extrapolate the center point outwards to each of the four corners
+//     * i.e. the outer latitude/longitude points are twice as far from the center point as the mid points of the four
+//     * elements.
+//     */
+//    harp_geographic_extrapolation(latlong[0], latlong[1], center_latitude, center_longitude,
+//                                  &(outer_latitude[0]), &(outer_longitude[0]));
+//    harp_geographic_extrapolation(latlong[2], latlong[3], center_latitude, center_longitude,
+//                                  &(outer_latitude[1]), &(outer_longitude[1]));
+//    harp_geographic_extrapolation(latlong[4], latlong[5], center_latitude, center_longitude,
+//                                  &(outer_latitude[2]), &(outer_longitude[2]));
+//    harp_geographic_extrapolation(latlong[6], latlong[7], center_latitude, center_longitude,
+//                                  &(outer_latitude[3]), &(outer_longitude[3]));
+//
+//    /* the inner corner coordinate (i.e. the one nearest to the center point of the scan) for each of the elements
+//     * is chosen as the interpolation between the center point of the opposite element and the outer point of the
+//     * current element:
+//     *
+//     *  outer_2
+//     *     \
+//     *  outer_corner_2
+//     *        \
+//     *      center_2
+//     *          \
+//     *       inner_corner_2
+//     *             \
+//     *          center_scan
+//     *                \
+//     *             inner_corner_0
+//     *                   \
+//     *                  center_0
+//     *                      \
+//     *                  outer_corner_0
+//     *                         \
+//     *                        outer_0
+//     *
+//     * In this case inner_corner_0 is the interpolation of outer_0 and center_2 and inner_corner_2 is the interpolation
+//     * of outer_2 and center_0.
+//     * The distance (center_scan, inner_corner_element) will then be half the distance (center_scan, center_element)
+//     * and the distance (center_scan, outer_corner_element) will be 1.5 the distance (center_scan, center_element)
+//     */
+//    harp_geographic_average(outer_latitude[0], outer_longitude[0], latlong[4], latlong[5],
+//                            &info->corner_latitude[0 + 3], &info->corner_longitude[0 + 3]);
+//    harp_geographic_average(outer_latitude[1], outer_longitude[1], latlong[6], latlong[7],
+//                            &info->corner_latitude[4 + 0], &info->corner_longitude[4 + 0]);
+//    harp_geographic_average(outer_latitude[2], outer_longitude[2], latlong[0], latlong[1],
+//                            &info->corner_latitude[8 + 1], &info->corner_longitude[8 + 1]);
+//    harp_geographic_average(outer_latitude[3], outer_longitude[3], latlong[2], latlong[3],
+//                            &info->corner_latitude[12 + 2], &info->corner_longitude[12 + 2]);
+//
+//    /* The outer corner coordinate is the interpolation of the outer coordinate of an element with its center
+//     * coordinate.
+//     */
+//    harp_geographic_average(outer_latitude[0], outer_longitude[0], latlong[0], latlong[1],
+//                            &info->corner_latitude[0 + 1], &info->corner_longitude[0 + 1]);
+//    harp_geographic_average(outer_latitude[1], outer_longitude[1], latlong[2], latlong[3],
+//                            &info->corner_latitude[4 + 2], &info->corner_longitude[4 + 2]);
+//    harp_geographic_average(outer_latitude[2], outer_longitude[2], latlong[4], latlong[5],
+//                            &info->corner_latitude[8 + 3], &info->corner_longitude[8 + 3]);
+//    harp_geographic_average(outer_latitude[3], outer_longitude[3], latlong[6], latlong[7],
+//                            &info->corner_latitude[12 + 0], &info->corner_longitude[12 + 0]);
+//
+//    /* the other corner coordinates are calculated by finding the intersection of the greatcircle through two
+//     * innner corner coordinates and the greatcircle through two outer corner coordinates.
+//     * Mind that the 4 elements of a scan are ordered according to:
+//     *
+//     *   2 - 1
+//     *   |   |
+//     *   3 - 0
+//     *
+//     * while the corner coordinates of each element are ordered according to (using the first in time / first in flight
+//     * convention):
+//     *
+//     *   3 - 2
+//     *   |   |
+//     *   0 - 1
+//     *
+//     */
+//    harp_geographic_intersection(info->corner_latitude[12 + 2], info->corner_longitude[12 + 2],
+//                                 info->corner_latitude[0 + 3], info->corner_longitude[0 + 3],
+//                                 info->corner_latitude[0 + 1], info->corner_longitude[0 + 1],
+//                                 info->corner_latitude[4 + 2], info->corner_longitude[4 + 2],
+//                                 &info->corner_latitude[0 + 2], &info->corner_longitude[0 + 2]);
+//    harp_geographic_intersection(info->corner_latitude[12 + 0], info->corner_longitude[12 + 0],
+//                                 info->corner_latitude[0 + 1], info->corner_longitude[0 + 1],
+//                                 info->corner_latitude[0 + 3], info->corner_longitude[0 + 3],
+//                                 info->corner_latitude[4 + 0], info->corner_longitude[4 + 0],
+//                                 &info->corner_latitude[0 + 0], &info->corner_longitude[0 + 0]);
+//    harp_geographic_intersection(info->corner_latitude[0 + 3], info->corner_longitude[0 + 3],
+//                                 info->corner_latitude[4 + 0], info->corner_longitude[4 + 0],
+//                                 info->corner_latitude[4 + 2], info->corner_longitude[4 + 2],
+//                                 info->corner_latitude[8 + 3], info->corner_longitude[8 + 3],
+//                                 &info->corner_latitude[4 + 3], &info->corner_longitude[4 + 3]);
+//    harp_geographic_intersection(info->corner_latitude[0 + 1], info->corner_longitude[0 + 1],
+//                                 info->corner_latitude[4 + 2], info->corner_longitude[4 + 2],
+//                                 info->corner_latitude[4 + 0], info->corner_longitude[4 + 0],
+//                                 info->corner_latitude[8 + 1], info->corner_longitude[8 + 1],
+//                                 &info->corner_latitude[4 + 1], &info->corner_longitude[4 + 1]);
+//    harp_geographic_intersection(info->corner_latitude[4 + 0], info->corner_longitude[4 + 0],
+//                                 info->corner_latitude[8 + 1], info->corner_longitude[8 + 1],
+//                                 info->corner_latitude[8 + 3], info->corner_longitude[8 + 3],
+//                                 info->corner_latitude[12 + 0], info->corner_longitude[12 + 0],
+//                                 &info->corner_latitude[8 + 0], &info->corner_longitude[8 + 0]);
+//    harp_geographic_intersection(info->corner_latitude[4 + 2], info->corner_longitude[4 + 2],
+//                                 info->corner_latitude[8 + 3], info->corner_longitude[8 + 3],
+//                                 info->corner_latitude[8 + 1], info->corner_longitude[8 + 1],
+//                                 info->corner_latitude[12 + 2], info->corner_longitude[12 + 2],
+//                                 &info->corner_latitude[8 + 2], &info->corner_longitude[8 + 2]);
+//    harp_geographic_intersection(info->corner_latitude[8 + 1], info->corner_longitude[8 + 1],
+//                                 info->corner_latitude[12 + 2], info->corner_longitude[12 + 2],
+//                                 info->corner_latitude[12 + 0], info->corner_longitude[12 + 0],
+//                                 info->corner_latitude[0 + 1], info->corner_longitude[0 + 1],
+//                                 &info->corner_latitude[12 + 1], &info->corner_longitude[12 + 1]);
+//    harp_geographic_intersection(info->corner_latitude[8 + 3], info->corner_longitude[8 + 3],
+//                                 info->corner_latitude[12 + 0], info->corner_longitude[12 + 0],
+//                                 info->corner_latitude[12 + 2], info->corner_longitude[12 + 2],
+//                                 info->corner_latitude[0 + 3], info->corner_longitude[0 + 3],
+//                                 &info->corner_latitude[12 + 3], &info->corner_longitude[12 + 3]);
+//
+//    return 0;
+//}
+
+
+/* Read and convert the observation time array for Sentinel-5 simulated CO. */
+//static int read_datetime(void *user_data, harp_array data)
+//{
+//    ingest_info *info = (ingest_info *)user_data;
+//    harp_array time_reference_array;
+//    double time_reference;
+//    long i;
+//
+//    /* 1) Read the single time reference value (seconds since 2010-01-01) */
+//    time_reference_array.ptr = &time_reference;
+//    if (read_dataset(info->product_cursor, "time", harp_type_double, 1, time_reference_array) != 0)
+//    {
+//        return -1;
+//    }
+//
+//    /* 2) Read delta_time and optionally broadcast:
+//     *    - If standard layout (2D), read num_scanlines values then broadcast over pixels.
+//     *    - If simulated layout (1D), read num_scanlines values only.
+//     */
+//    if (s5_delta_time_num_dims[info->product_type] == 2)
+//    {
+//        /* Standard S5P: one delta_time per scanline, then repeat for each pixel */
+//        if (read_dataset(info->product_cursor, "delta_time", harp_type_double, info->num_scanlines, data) != 0)
+//        {
+//            return -1;
+//        }
+//        broadcast_array_double(info->num_scanlines, info->num_pixels, data.double_data);
+//    }
+//    else
+//    {
+//        /* Simulated: exactly one delta_time per scanline, no broadcast */
+//        if (read_dataset(info->product_cursor, "delta_time", harp_type_double, info->num_scanlines, data) != 0)
+//        {
+//            return -1;
+//        }
+//    }
+//
+//    /* 3) Convert milliseconds to seconds and add to reference time */
+//    {
+//        long count = info->num_scanlines * (s5_delta_time_num_dims[info->product_type] == 2 ? info->num_pixels : 1);
+//
+//        for (i = 0; i < count; i++)
+//        {
+//            data.double_data[i] = time_reference + data.double_data[i] / 1e3;
+//        }
+//    }
+//
+//    return 0;
+//}
+
+/* Read the absolute orbit number from the global attribute */
+static int read_orbit_index(void *user_data, harp_array data)
+{
+    ingest_info *info = (ingest_info *)user_data;
+    coda_cursor cursor;
+    coda_native_type read_type;
+    uint32_t uval;
+    int32_t ival;
+
+    /* 1) Bind a cursor to the root product */
+    if (coda_cursor_set_product(&cursor, info->product) != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+
+    /* 2) Try /@orbit_start first, then /@orbit */
+    if (coda_cursor_goto(&cursor, "/@orbit_start") != 0 && coda_cursor_goto(&cursor, "/@orbit") != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+
+    /* 3) If it's an array, move to its first element */
+    {
+        coda_type_class tc;
+
+        if (coda_cursor_get_type_class(&cursor, &tc) != 0)
+        {
+            return -1;
+        }
+        if (tc == coda_array_class)
+        {
+            if (coda_cursor_goto_first_array_element(&cursor) != 0)
+            {
+                harp_set_error(HARP_ERROR_CODA, NULL);
+                return -1;
+            }
+        }
+    }
+
+    /* 4) Determine the native storage type and read appropriately */
+    if (coda_cursor_get_read_type(&cursor, &read_type) != 0)
+    {
+        harp_set_error(HARP_ERROR_CODA, NULL);
+        return -1;
+    }
+    if (read_type == coda_native_type_uint32)
+    {
+        /* Stored as an unsigned 32-bit */
+        if (coda_cursor_read_uint32(&cursor, &uval) != 0)
+        {
+            harp_set_error(HARP_ERROR_CODA, NULL);
+            return -1;
+        }
+        ival = (int32_t)uval;
+    }
+    else
+    {
+        /* Stored as a signed 32-bit (or other compatible) */
+        if (coda_cursor_read_int32(&cursor, &ival) != 0)
+        {
+            harp_set_error(HARP_ERROR_CODA, NULL);
+            return -1;
+        }
+    }
+
+    /* 5) Write back into the HARP buffer */
+    data.int32_data[0] = ival;
+    return 0;
+}
+
+
+/* Field: data/geolocation_information */
+
+static int read_geolocation_time(void *user_data, harp_array data)
+{
+    ingest_info *info = (ingest_info *)user_data;
+
+    /* original 2-D */
+    long n_src = (long)info->num_lines * info->num_for;                 
+    /* HARP's {time}  */
+    long n_out = n_src * info->num_fov;                                 
+
+    /* step 1: read the [line,for] array into the 'front' of the buffer */
+    if (read_dataset(info->geolocation_cursor, "onboard_utc", harp_type_double, n_src, data) != 0)
+    {
+        return -1;
+    }
+
+    /* step 2: broadcast in place to full [line,for,fov] */
+    broadcast_array_double(info->num_lines, info->num_for, info->num_fov, data.double_data);
+
+    /* buffer now holds n_out samples; HARP flattening order is fine */
+    return 0;
+}
+
+
+static int read_geolocation_latitude(void *user_data, harp_array data)
+{
+    ingest_info *info = (ingest_info *)user_data;
+
+    return read_dataset(info->geolocation_cursor, "sounder_pixel_latitude", harp_type_float, info->num_lines * info->num_for * info->num_fov, data);
+}
+
+static int read_geolocation_longitude(void *user_data, harp_array data)
+{
+    ingest_info *info = (ingest_info *)user_data;
+
+    return read_dataset(info->geolocation_cursor, "sounder_pixel_longitude", harp_type_float, info->num_lines * info->num_for * info->num_fov, data);
+}
+
+static int read_geolocation_solar_azimuth_angle(void *user_data, harp_array data)
+{
+    ingest_info *info = (ingest_info *)user_data;
+
+    return read_dataset(info->geolocation_cursor, "sounder_pixel_sun_azimuth", harp_type_float, info->num_lines * info->num_for * info->num_fov, data);
+}
+
+static int read_geolocation_solar_zenith_angle(void *user_data, harp_array data)
+{
+    ingest_info *info = (ingest_info *)user_data;
+
+    return read_dataset(info->geolocation_cursor, "sounder_pixel_sun_zenith", harp_type_float, info->num_lines * info->num_for * info->num_fov, data);
+}
+
+static int read_geolocation_sensor_azimuth_angle(void *user_data, harp_array data)
+{
+    ingest_info *info = (ingest_info *)user_data;
+
+    return read_dataset(info->geolocation_cursor, "sounder_pixel_azimuth", harp_type_float, info->num_lines * info->num_for * info->num_fov, data);
+}
+
+static int read_geolocation_sensor_zenith_angle(void *user_data, harp_array data)
+{
+    ingest_info *info = (ingest_info *)user_data;
+
+    return read_dataset(info->geolocation_cursor, "sounder_pixel_zenith", harp_type_float, info->num_lines * info->num_for * info->num_fov, data);
+}
+
+
+
+
+//static int read_product_qa_value(void *user_data, harp_array data)
+//{
+//    ingest_info *info = (ingest_info *)user_data;
+//    int result;
+//
+//    /* we don't want the add_offset/scale_factor applied for the qa_value; we just want the raw 8bit value */
+//    coda_set_option_perform_conversions(0);
+//    result = read_dataset(info->product_cursor, "qa_value", harp_type_int8,
+//                          info->num_scanlines * info->num_pixels, data);
+//    coda_set_option_perform_conversions(1);
+//
+//    return result;
+//}
+
+/*
+ * Products' Registration Routines
+ */
+
+//static void register_mapping_per_band(harp_variable_definition *variable_definition, const char *variable_name,
+//                                      const char *dataset_name, const char *bands_list[], const char *bands_list_map[],
+//                                      int num_bands, const char *description)
+//{
+//    int i;
+//    char path[MAX_PATH_LENGTH];
+//
+//
+//    for (i = 0; i < num_bands; i++)
+//    {
+//        if (strcmp(variable_name, "datetime_start[]") == 0)
+//        {
+//            snprintf(path, MAX_PATH_LENGTH, "/data/%s/%s/time, /data/%s/%s/delta_time[]", bands_list[i], dataset_name,
+//                     bands_list[i], dataset_name);
+//            harp_variable_definition_add_mapping(variable_definition, bands_list_map[i], NULL, path, description);
+//        }
+//        else
+//        {
+//            snprintf(path, MAX_PATH_LENGTH, "/data/%s/%s/%s", bands_list[i], dataset_name, variable_name);
+//            harp_variable_definition_add_mapping(variable_definition, bands_list_map[i], NULL, path, description);
+//        }
+//    }
+//}
+
+static void register_core_variables(harp_product_definition *product_definition)
+{
+    const char *path;
+    const char *description;
+    harp_variable_definition *variable_definition;
+    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
+
+    /* orbit_index */
+    description = "absolute orbit number";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "orbit_index", harp_type_int32, 0, NULL, NULL,
+                                                   description, NULL, NULL, read_orbit_index);
+    harp_variable_definition_add_mapping(variable_definition, NULL, NULL, "/@orbit_start", NULL);
+
+}
+
+
+
+
+static void register_geolocation_variables(harp_product_definition *product_definition)
+{
+    const char *path;
+    const char *description;
+    harp_variable_definition *variable_definition;
+
+    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
+
+    /* time */ 
+    description = "On-board time in UTC"; 
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "time", harp_type_double, 1, dimension_type_1d, NULL, description,"s", NULL, read_geolocation_time);
+    
+    path = "/data/geolocation_information/onboard_utc[]"; 
+    harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, NULL);
+
+    /* longitude */
+    description = "Geocentric longitude at sounder pixel centre";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "longitude", harp_type_float, 1,
+                                                    dimension_type_1d, NULL, description, "degree_east", NULL,
+                                                    read_geolocation_longitude);
+    harp_variable_definition_set_valid_range_float(variable_definition, -180.0, 180.0);
+    path = "/data/geolocation_information/sounder_pixel_longitude[]";
+    harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, NULL);
+
+    /* latitude */
+    description = "Geodetic latitude at sounder pixel centre";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "latitude", harp_type_float, 1,
+                                                    dimension_type_1d, NULL, description, "degree_north", NULL,
+                                                    read_geolocation_latitude);
+    harp_variable_definition_set_valid_range_float(variable_definition, -90.0, 90.0);
+    path = "/data/geolocation_information/sounder_pixel_latitude[]";
+    harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, NULL);
+
+    // TODO: Bounds need to be calculated  (see IASI L2 and the routine copied above)
+    /* longitude_bounds */
+    //description = "corner longitudes of the measurement";
+    //variable_definition =
+    //    harp_ingestion_register_variable_block_read(product_definition, "longitude_bounds", harp_type_double, 2,
+    //                                                dimension_type_bounds, dimension_bounds, description,
+    //                                                "degree_east", NULL, read_corner_longitude);
+    //harp_variable_definition_set_valid_range_double(variable_definition, -180.0, 180.0);
+    //path = "/MDR[]/MDR/EARTH_LOCATION[]";
+    //description = "the corner coordinates are rough estimates of the circle areas for the scan elements; the size of "
+    //    "a scan element (in a certain direction) is taken to be half the distance, from center to center, "
+    //    "from a scan element to its nearest neighboring scan element";
+    //harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, description);
+
+    ///* latitude_bounds */
+    //description = "corner latitudes of the measurement";
+    //variable_definition =
+    //    harp_ingestion_register_variable_block_read(product_definition, "latitude_bounds", harp_type_double, 2,
+    //                                                dimension_type_bounds, dimension_bounds, description,
+    //                                                "degree_north", NULL, read_corner_latitude);
+    //harp_variable_definition_set_valid_range_double(variable_definition, -90.0, 90.0);
+    //path = "/MDR[]/MDR/EARTH_LOCATION[]";
+    //description = "the corner coordinates are rough estimates of the circle areas for the scan elements; the size of "
+    //    "a scan element (in a certain direction) is taken to be half the distance, from center to center, "
+    //    "from a scan element to its nearest neighboring scan element";
+    //harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, description);
+
+    /* solar_azimuth_angle */
+    description = "Solar azimuth angle at sounder pixel centre";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "solar_azimuth_angle", harp_type_float, 1,
+                                                    dimension_type_1d, NULL, description, "degree", NULL,
+                                                    read_geolocation_solar_azimuth_angle);
+    harp_variable_definition_set_valid_range_float(variable_definition, 0.0, 360.0);
+    path = "/data/geolocation_information/sounder_pixel_sun_azimuth[]";
+    harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, NULL);
+
+    /* solar_zenith_angle */
+    description = "Solar zenith angle at sounder pixel centre";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "solar_zenith_angle", harp_type_float,
+                                                    1, dimension_type_1d, NULL, description, "degree", NULL,
+                                                    read_geolocation_solar_zenith_angle);
+    harp_variable_definition_set_valid_range_float(variable_definition, 0.0, 180.0);
+    path = "/data/geolocation_information/sounder_pixel_sun_zenith[]";
+    harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, NULL);
+
+    /* sensor_azimuth_angle */
+    description = "Measurement azimuth angle at sounder pixel centre";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "sensor_azimuth_angle", harp_type_float, 1,
+                                                    dimension_type_1d, NULL, description, "degree", NULL,
+                                                    read_geolocation_sensor_azimuth_angle);
+    harp_variable_definition_set_valid_range_float(variable_definition, 0.0, 360.0);
+    path = "/data/geolocation_information/sounder_pixel_azimuth[]";
+    harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, NULL);
+
+    /* sensor_zenith_angle */
+    description = "Measurement zenith angle at sounder pixel centre";
+    variable_definition =
+        harp_ingestion_register_variable_full_read(product_definition, "sensor_zenith_angle", harp_type_float, 1,
+                                                    dimension_type_1d, NULL, description, "degree", NULL,
+                                                    read_geolocation_sensor_zenith_angle);
+    harp_variable_definition_set_valid_range_float(variable_definition, 0.0, 180.0);
+    path = "/data/geolocation_information/sounder_pixel_zenith[]";
+    harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, NULL);
+
+
+}
+
 
 static void register_co_product(void)
 {
     const char *path;
     const char *description;
+
+    harp_ingestion_module *module;
+    harp_product_definition *product_definition;
+    harp_variable_definition *variable_definition;
+
+    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
+
+    /* Product Registration Phase */
+    module = harp_ingestion_register_module("IAS_02_CO", "IASI-NG", "EPS_SG", "IAS_02_CO_", "IASI-NG L2 CO total column densities", ingestion_init, ingestion_done);
+
+    /* harp_ingestion_register_product( module ptr, "ProductShortName", options table (NULL), dimension-callback ) */
+    product_definition = harp_ingestion_register_product(module, "IAS_02_CO", NULL, read_dimensions);
+
+    /* Variables' Registration Phase */
+    
+    register_core_variables(product_definition); 
+    register_geolocation_variables(product_definition); 
+
 }
 
 
