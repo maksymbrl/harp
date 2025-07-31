@@ -605,11 +605,6 @@ static int ingestion_init(const harp_ingestion_module *module, coda_product *pro
         return -1;
     }
 
-    printf("[ingestion_init]: num_lines  = %ld\n", (long)info->num_lines);
-    printf("[ingestion_init]: num_for    = %ld\n", (long)info->num_for);
-    printf("[ingestion_init]: num_fov    = %ld\n", (long)info->num_fov);
-    printf("[ingestion_init]: num_levels = %ld\n", (long)info->num_levels);
-
     *user_data = info;
 
     return 0;
@@ -623,7 +618,6 @@ static int read_dimensions(void *user_data, long dimension[HARP_NUM_DIM_TYPES])
 
     dimension[harp_dimension_time] = info->num_lines * info->num_for * info->num_fov;
     dimension[harp_dimension_vertical] = info->num_levels;
-    //dimension[harp_dimension_spectral] = info->num_spectral;
 
     return 0;
 }
@@ -774,233 +768,6 @@ static int read_dataset(coda_cursor cursor, const char *dataset_name, harp_data_
 
     return 0;
 }
-
-
-
-/* From IASI L2 module */ 
-//static int get_corner_coordinates(ingest_info *info, long scan_id)
-//{
-//    double latlong[4 * 2];
-//    double center_latitude;
-//    double center_longitude;
-//    double outer_latitude[4];
-//    double outer_longitude[4];
-//    coda_cursor cursor;
-//    int i;
-//
-//    cursor = info->mdr_cursor[scan_id / 30];
-//    if (coda_cursor_goto_record_field_by_name(&cursor, "EARTH_LOCATION") != 0)
-//    {
-//        harp_set_error(HARP_ERROR_CODA, NULL);
-//        return -1;
-//    }
-//    /* read 4 lat/long pairs (using flat index) from [120,2] array */
-//    if (coda_cursor_goto_array_element_by_index(&cursor, (scan_id % 30) * 4 * 2) != 0)
-//    {
-//        harp_set_error(HARP_ERROR_CODA, NULL);
-//        return -1;
-//    }
-//    for (i = 0; i < 8; i++)
-//    {
-//        if (coda_cursor_read_double(&cursor, &latlong[i]) != 0)
-//        {
-//            harp_set_error(HARP_ERROR_CODA, NULL);
-//            return -1;
-//        }
-//        if (i < 8 - 1)
-//        {
-//            if (coda_cursor_goto_next_array_element(&cursor) != 0)
-//            {
-//                harp_set_error(HARP_ERROR_CODA, NULL);
-//                return -1;
-//            }
-//        }
-//    }
-//
-//    /* The 2x2 elements in a scan are stored in the product in the order:
-//     *  - bottom right
-//     *  - top right
-//     *  - top left
-//     *  - bottom left
-//     * The scans within a scan line go from left to right with increasing time.
-//     * The bottom is defined as 'first in flight direction' and the top as 'last in flight direction'.
-//     */
-//
-//    /* calculate the center point of the scan */
-//    harp_geographic_intersection(latlong[6], latlong[7], latlong[2], latlong[3], latlong[0], latlong[1], latlong[4],
-//                                 latlong[5], &center_latitude, &center_longitude);
-//
-//    /* extrapolate the center point outwards to each of the four corners
-//     * i.e. the outer latitude/longitude points are twice as far from the center point as the mid points of the four
-//     * elements.
-//     */
-//    harp_geographic_extrapolation(latlong[0], latlong[1], center_latitude, center_longitude,
-//                                  &(outer_latitude[0]), &(outer_longitude[0]));
-//    harp_geographic_extrapolation(latlong[2], latlong[3], center_latitude, center_longitude,
-//                                  &(outer_latitude[1]), &(outer_longitude[1]));
-//    harp_geographic_extrapolation(latlong[4], latlong[5], center_latitude, center_longitude,
-//                                  &(outer_latitude[2]), &(outer_longitude[2]));
-//    harp_geographic_extrapolation(latlong[6], latlong[7], center_latitude, center_longitude,
-//                                  &(outer_latitude[3]), &(outer_longitude[3]));
-//
-//    /* the inner corner coordinate (i.e. the one nearest to the center point of the scan) for each of the elements
-//     * is chosen as the interpolation between the center point of the opposite element and the outer point of the
-//     * current element:
-//     *
-//     *  outer_2
-//     *     \
-//     *  outer_corner_2
-//     *        \
-//     *      center_2
-//     *          \
-//     *       inner_corner_2
-//     *             \
-//     *          center_scan
-//     *                \
-//     *             inner_corner_0
-//     *                   \
-//     *                  center_0
-//     *                      \
-//     *                  outer_corner_0
-//     *                         \
-//     *                        outer_0
-//     *
-//     * In this case inner_corner_0 is the interpolation of outer_0 and center_2 and inner_corner_2 is the interpolation
-//     * of outer_2 and center_0.
-//     * The distance (center_scan, inner_corner_element) will then be half the distance (center_scan, center_element)
-//     * and the distance (center_scan, outer_corner_element) will be 1.5 the distance (center_scan, center_element)
-//     */
-//    harp_geographic_average(outer_latitude[0], outer_longitude[0], latlong[4], latlong[5],
-//                            &info->corner_latitude[0 + 3], &info->corner_longitude[0 + 3]);
-//    harp_geographic_average(outer_latitude[1], outer_longitude[1], latlong[6], latlong[7],
-//                            &info->corner_latitude[4 + 0], &info->corner_longitude[4 + 0]);
-//    harp_geographic_average(outer_latitude[2], outer_longitude[2], latlong[0], latlong[1],
-//                            &info->corner_latitude[8 + 1], &info->corner_longitude[8 + 1]);
-//    harp_geographic_average(outer_latitude[3], outer_longitude[3], latlong[2], latlong[3],
-//                            &info->corner_latitude[12 + 2], &info->corner_longitude[12 + 2]);
-//
-//    /* The outer corner coordinate is the interpolation of the outer coordinate of an element with its center
-//     * coordinate.
-//     */
-//    harp_geographic_average(outer_latitude[0], outer_longitude[0], latlong[0], latlong[1],
-//                            &info->corner_latitude[0 + 1], &info->corner_longitude[0 + 1]);
-//    harp_geographic_average(outer_latitude[1], outer_longitude[1], latlong[2], latlong[3],
-//                            &info->corner_latitude[4 + 2], &info->corner_longitude[4 + 2]);
-//    harp_geographic_average(outer_latitude[2], outer_longitude[2], latlong[4], latlong[5],
-//                            &info->corner_latitude[8 + 3], &info->corner_longitude[8 + 3]);
-//    harp_geographic_average(outer_latitude[3], outer_longitude[3], latlong[6], latlong[7],
-//                            &info->corner_latitude[12 + 0], &info->corner_longitude[12 + 0]);
-//
-//    /* the other corner coordinates are calculated by finding the intersection of the greatcircle through two
-//     * innner corner coordinates and the greatcircle through two outer corner coordinates.
-//     * Mind that the 4 elements of a scan are ordered according to:
-//     *
-//     *   2 - 1
-//     *   |   |
-//     *   3 - 0
-//     *
-//     * while the corner coordinates of each element are ordered according to (using the first in time / first in flight
-//     * convention):
-//     *
-//     *   3 - 2
-//     *   |   |
-//     *   0 - 1
-//     *
-//     */
-//    harp_geographic_intersection(info->corner_latitude[12 + 2], info->corner_longitude[12 + 2],
-//                                 info->corner_latitude[0 + 3], info->corner_longitude[0 + 3],
-//                                 info->corner_latitude[0 + 1], info->corner_longitude[0 + 1],
-//                                 info->corner_latitude[4 + 2], info->corner_longitude[4 + 2],
-//                                 &info->corner_latitude[0 + 2], &info->corner_longitude[0 + 2]);
-//    harp_geographic_intersection(info->corner_latitude[12 + 0], info->corner_longitude[12 + 0],
-//                                 info->corner_latitude[0 + 1], info->corner_longitude[0 + 1],
-//                                 info->corner_latitude[0 + 3], info->corner_longitude[0 + 3],
-//                                 info->corner_latitude[4 + 0], info->corner_longitude[4 + 0],
-//                                 &info->corner_latitude[0 + 0], &info->corner_longitude[0 + 0]);
-//    harp_geographic_intersection(info->corner_latitude[0 + 3], info->corner_longitude[0 + 3],
-//                                 info->corner_latitude[4 + 0], info->corner_longitude[4 + 0],
-//                                 info->corner_latitude[4 + 2], info->corner_longitude[4 + 2],
-//                                 info->corner_latitude[8 + 3], info->corner_longitude[8 + 3],
-//                                 &info->corner_latitude[4 + 3], &info->corner_longitude[4 + 3]);
-//    harp_geographic_intersection(info->corner_latitude[0 + 1], info->corner_longitude[0 + 1],
-//                                 info->corner_latitude[4 + 2], info->corner_longitude[4 + 2],
-//                                 info->corner_latitude[4 + 0], info->corner_longitude[4 + 0],
-//                                 info->corner_latitude[8 + 1], info->corner_longitude[8 + 1],
-//                                 &info->corner_latitude[4 + 1], &info->corner_longitude[4 + 1]);
-//    harp_geographic_intersection(info->corner_latitude[4 + 0], info->corner_longitude[4 + 0],
-//                                 info->corner_latitude[8 + 1], info->corner_longitude[8 + 1],
-//                                 info->corner_latitude[8 + 3], info->corner_longitude[8 + 3],
-//                                 info->corner_latitude[12 + 0], info->corner_longitude[12 + 0],
-//                                 &info->corner_latitude[8 + 0], &info->corner_longitude[8 + 0]);
-//    harp_geographic_intersection(info->corner_latitude[4 + 2], info->corner_longitude[4 + 2],
-//                                 info->corner_latitude[8 + 3], info->corner_longitude[8 + 3],
-//                                 info->corner_latitude[8 + 1], info->corner_longitude[8 + 1],
-//                                 info->corner_latitude[12 + 2], info->corner_longitude[12 + 2],
-//                                 &info->corner_latitude[8 + 2], &info->corner_longitude[8 + 2]);
-//    harp_geographic_intersection(info->corner_latitude[8 + 1], info->corner_longitude[8 + 1],
-//                                 info->corner_latitude[12 + 2], info->corner_longitude[12 + 2],
-//                                 info->corner_latitude[12 + 0], info->corner_longitude[12 + 0],
-//                                 info->corner_latitude[0 + 1], info->corner_longitude[0 + 1],
-//                                 &info->corner_latitude[12 + 1], &info->corner_longitude[12 + 1]);
-//    harp_geographic_intersection(info->corner_latitude[8 + 3], info->corner_longitude[8 + 3],
-//                                 info->corner_latitude[12 + 0], info->corner_longitude[12 + 0],
-//                                 info->corner_latitude[12 + 2], info->corner_longitude[12 + 2],
-//                                 info->corner_latitude[0 + 3], info->corner_longitude[0 + 3],
-//                                 &info->corner_latitude[12 + 3], &info->corner_longitude[12 + 3]);
-//
-//    return 0;
-//}
-
-
-/* Read and convert the observation time array for Sentinel-5 simulated CO. */
-//static int read_datetime(void *user_data, harp_array data)
-//{
-//    ingest_info *info = (ingest_info *)user_data;
-//    harp_array time_reference_array;
-//    double time_reference;
-//    long i;
-//
-//    /* 1) Read the single time reference value (seconds since 2010-01-01) */
-//    time_reference_array.ptr = &time_reference;
-//    if (read_dataset(info->product_cursor, "time", harp_type_double, 1, time_reference_array) != 0)
-//    {
-//        return -1;
-//    }
-//
-//    /* 2) Read delta_time and optionally broadcast:
-//     *    - If standard layout (2D), read num_scanlines values then broadcast over pixels.
-//     *    - If simulated layout (1D), read num_scanlines values only.
-//     */
-//    if (s5_delta_time_num_dims[info->product_type] == 2)
-//    {
-//        /* Standard S5P: one delta_time per scanline, then repeat for each pixel */
-//        if (read_dataset(info->product_cursor, "delta_time", harp_type_double, info->num_scanlines, data) != 0)
-//        {
-//            return -1;
-//        }
-//        broadcast_array_double(info->num_scanlines, info->num_pixels, data.double_data);
-//    }
-//    else
-//    {
-//        /* Simulated: exactly one delta_time per scanline, no broadcast */
-//        if (read_dataset(info->product_cursor, "delta_time", harp_type_double, info->num_scanlines, data) != 0)
-//        {
-//            return -1;
-//        }
-//    }
-//
-//    /* 3) Convert milliseconds to seconds and add to reference time */
-//    {
-//        long count = info->num_scanlines * (s5_delta_time_num_dims[info->product_type] == 2 ? info->num_pixels : 1);
-//
-//        for (i = 0; i < count; i++)
-//        {
-//            data.double_data[i] = time_reference + data.double_data[i] / 1e3;
-//        }
-//    }
-//
-//    return 0;
-//}
 
 /* Read the absolute orbit number from the global attribute */
 static int read_orbit_index(void *user_data, harp_array data)
@@ -1353,51 +1120,9 @@ static int read_geolocation_sensor_zenith_angle(void *user_data, harp_array data
     return read_dataset(info->geolocation_cursor, "sounder_pixel_zenith", harp_type_float, info->num_lines * info->num_for * info->num_fov, data);
 }
 
-
-
-
-
-//static int read_product_qa_value(void *user_data, harp_array data)
-//{
-//    ingest_info *info = (ingest_info *)user_data;
-//    int result;
-//
-//    /* we don't want the add_offset/scale_factor applied for the qa_value; we just want the raw 8bit value */
-//    coda_set_option_perform_conversions(0);
-//    result = read_dataset(info->product_cursor, "qa_value", harp_type_int8,
-//                          info->num_scanlines * info->num_pixels, data);
-//    coda_set_option_perform_conversions(1);
-//
-//    return result;
-//}
-
 /*
  * Products' Registration Routines
  */
-
-//static void register_mapping_per_band(harp_variable_definition *variable_definition, const char *variable_name,
-//                                      const char *dataset_name, const char *bands_list[], const char *bands_list_map[],
-//                                      int num_bands, const char *description)
-//{
-//    int i;
-//    char path[MAX_PATH_LENGTH];
-//
-//
-//    for (i = 0; i < num_bands; i++)
-//    {
-//        if (strcmp(variable_name, "datetime_start[]") == 0)
-//        {
-//            snprintf(path, MAX_PATH_LENGTH, "/data/%s/%s/time, /data/%s/%s/delta_time[]", bands_list[i], dataset_name,
-//                     bands_list[i], dataset_name);
-//            harp_variable_definition_add_mapping(variable_definition, bands_list_map[i], NULL, path, description);
-//        }
-//        else
-//        {
-//            snprintf(path, MAX_PATH_LENGTH, "/data/%s/%s/%s", bands_list[i], dataset_name, variable_name);
-//            harp_variable_definition_add_mapping(variable_definition, bands_list_map[i], NULL, path, description);
-//        }
-//    }
-//}
 
 static void register_core_variables(harp_product_definition *product_definition)
 {
@@ -1569,33 +1294,6 @@ static void register_geolocation_variables(harp_product_definition *product_defi
     harp_variable_definition_set_valid_range_float(variable_definition, -90.0, 90.0);
     path = "/data/geolocation_information/sounder_pixel_latitude[]";
     harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, NULL);
-
-    // TODO: Bounds need to be calculated  (see IASI L2 and the routine copied above)
-    /* longitude_bounds */
-    //description = "corner longitudes of the measurement";
-    //variable_definition =
-    //    harp_ingestion_register_variable_block_read(product_definition, "longitude_bounds", harp_type_double, 2,
-    //                                                dimension_type_bounds, dimension_bounds, description,
-    //                                                "degree_east", NULL, read_corner_longitude);
-    //harp_variable_definition_set_valid_range_double(variable_definition, -180.0, 180.0);
-    //path = "/MDR[]/MDR/EARTH_LOCATION[]";
-    //description = "the corner coordinates are rough estimates of the circle areas for the scan elements; the size of "
-    //    "a scan element (in a certain direction) is taken to be half the distance, from center to center, "
-    //    "from a scan element to its nearest neighboring scan element";
-    //harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, description);
-
-    ///* latitude_bounds */
-    //description = "corner latitudes of the measurement";
-    //variable_definition =
-    //    harp_ingestion_register_variable_block_read(product_definition, "latitude_bounds", harp_type_double, 2,
-    //                                                dimension_type_bounds, dimension_bounds, description,
-    //                                                "degree_north", NULL, read_corner_latitude);
-    //harp_variable_definition_set_valid_range_double(variable_definition, -90.0, 90.0);
-    //path = "/MDR[]/MDR/EARTH_LOCATION[]";
-    //description = "the corner coordinates are rough estimates of the circle areas for the scan elements; the size of "
-    //    "a scan element (in a certain direction) is taken to be half the distance, from center to center, "
-    //    "from a scan element to its nearest neighboring scan element";
-    //harp_variable_definition_add_mapping(variable_definition, NULL, NULL, path, description);
 
     /* solar_azimuth_angle */
     description = "Solar azimuth angle at sounder pixel centre";
