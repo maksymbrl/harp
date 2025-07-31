@@ -461,49 +461,6 @@ static int init_dimensions(ingest_info *info)
     return 0;
 }
 
-/* From S5P L1b module */
-static int init_dataset(coda_cursor cursor, const char *name, long num_elements, coda_cursor *new_cursor,
-                        harp_scalar *fill_value)
-{
-    long coda_num_elements;
-
-    if (coda_cursor_goto_record_field_by_name(&cursor, name) != 0)
-    {
-        harp_set_error(HARP_ERROR_CODA, NULL);
-        return -1;
-    }
-    if (coda_cursor_get_num_elements(&cursor, &coda_num_elements) != 0)
-    {
-        harp_set_error(HARP_ERROR_CODA, NULL);
-        return -1;
-    }
-    if (coda_num_elements != num_elements)
-    {
-        harp_set_error(HARP_ERROR_INGESTION, "dataset has %ld elements; expected %ld", coda_num_elements, num_elements);
-        harp_add_coda_cursor_path_to_error_message(&cursor);
-        return -1;
-    }
-    if (coda_cursor_goto(&cursor, "@FillValue[0]") != 0)
-    {
-        harp_set_error(HARP_ERROR_CODA, NULL);
-        return -1;
-    }
-
-    if (coda_cursor_read_float(&cursor, &fill_value->float_data) != 0)
-    {
-        harp_set_error(HARP_ERROR_CODA, NULL);
-        return -1;
-    }
-
-    coda_cursor_goto_parent(&cursor);
-    coda_cursor_goto_parent(&cursor);
-    coda_cursor_goto_parent(&cursor);
-
-    *new_cursor = cursor;
-
-    return 0;
-}
-
 /* Extract Sentinel-5 L1b product collection and processor version
  * from the global "logical product name".
  */
@@ -626,7 +583,6 @@ static int read_dataset(coda_cursor cursor, const char *dataset_name, harp_data_
                         harp_array data)
 {
     long coda_num_elements;
-    harp_scalar fill_value;
 
     if (coda_cursor_goto_record_field_by_name(&cursor, dataset_name) != 0)
     {
@@ -1042,15 +998,11 @@ static int convert_percentage_fraction(void *user_data, const char *variable_nam
 
 static int read_surface_ice_fraction(void *user_data, harp_array data)
 {
-    ingest_info *info = (ingest_info *)user_data;
-
     return convert_percentage_fraction(user_data, "ice_fraction", data);
 }
 
 static int read_surface_land_fraction(void *user_data, harp_array data)
 {
-    ingest_info *info = (ingest_info *)user_data;
-
     return convert_percentage_fraction(user_data, "land_fraction", data);
 }
 
@@ -1062,8 +1014,6 @@ static int read_geolocation_time(void *user_data, harp_array data)
 
     /* original 2-D */
     long n_src = (long)info->num_lines * info->num_for;                 
-    /* HARP's {time}  */
-    long n_out = n_src * info->num_fov;                                 
 
     /* step 1: read the [line,for] array into the 'front' of the buffer */
     if (read_dataset(info->geolocation_cursor, "onboard_utc", harp_type_double, n_src, data) != 0)
@@ -1126,10 +1076,8 @@ static int read_geolocation_sensor_zenith_angle(void *user_data, harp_array data
 
 static void register_core_variables(harp_product_definition *product_definition)
 {
-    const char *path;
     const char *description;
     harp_variable_definition *variable_definition;
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
 
     /* orbit_index */
     description = "absolute orbit number";
@@ -1417,14 +1365,8 @@ static void register_statistical_variables(harp_product_definition *product_defi
 
 static void register_co_product(void)
 {
-    const char *path;
-    const char *description;
-
     harp_ingestion_module *module;
     harp_product_definition *product_definition;
-    harp_variable_definition *variable_definition;
-
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
 
     const char *product_type = "IAS_02_CO_";
 
@@ -1444,14 +1386,8 @@ static void register_co_product(void)
 
 static void register_nac_product(void)
 {
-    const char *path;
-    const char *description;
-
     harp_ingestion_module *module;
     harp_product_definition *product_definition;
-    harp_variable_definition *variable_definition;
-
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
 
     const char *product_type = "IAS_02_NAC";
 
@@ -1471,14 +1407,8 @@ static void register_nac_product(void)
 
 static void register_o3_product(void)
 {
-    const char *path;
-    const char *description;
-
     harp_ingestion_module *module;
     harp_product_definition *product_definition;
-    harp_variable_definition *variable_definition;
-
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
 
     const char *product_type = "IAS_02_O3_";
 
@@ -1498,14 +1428,8 @@ static void register_o3_product(void)
 
 static void register_so2_product(void)
 {
-    const char *path;
-    const char *description;
-
     harp_ingestion_module *module;
     harp_product_definition *product_definition;
-    harp_variable_definition *variable_definition;
-
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
 
     const char *product_type = "IAS_02_SO2";
 
@@ -1525,14 +1449,8 @@ static void register_so2_product(void)
 
 static void register_cld_product(void)
 {
-    const char *path;
-    const char *description;
-
     harp_ingestion_module *module;
     harp_product_definition *product_definition;
-    harp_variable_definition *variable_definition;
-
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
 
     const char *product_type = "IAS_02_CLD";
 
@@ -1562,7 +1480,6 @@ static void register_ghg_product(void)
     harp_product_definition *product_definition;
     harp_variable_definition *variable_definition;
 
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
     harp_dimension_type dimension_type_2d[2] = { harp_dimension_time, harp_dimension_vertical };
 
     const char *product_type = "IAS_02_GHG";
@@ -1654,14 +1571,8 @@ static void register_sfc_product(void)
 
 static void register_twv_product(void)
 {
-    const char *path;
-    const char *description;
-
     harp_ingestion_module *module;
     harp_product_definition *product_definition;
-    harp_variable_definition *variable_definition;
-
-    harp_dimension_type dimension_type_1d[1] = { harp_dimension_time };
 
     const char *product_type = "IAS_02_TWV";
 
